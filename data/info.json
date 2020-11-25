@@ -1,7 +1,7 @@
 {
   "hardware" : "NotifHeureXL",
   "licence": "GPL",
-  "require": "0.8",
-  "version": "0.8",
+  "require": "1.0.0",
+  "version": "1.0.1",
   "author": "byfeel"
 }

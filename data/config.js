@@ -26,7 +26,10 @@ function IsJsonString(str) {
     return true;
     }
 
-
+    function pad (str, max) {
+      str = str.toString();
+      return str.length < max ? pad("0" + str, max) : str;
+    }
 
 function getInfo() {
 $.ajax({
@@ -59,15 +62,21 @@ $.ajax({
         $("#selectNotifLum").val(jinfo.TYPELED).change();
         $("#selectNotifAud").val(jinfo.TYPEAUDIO).change();
         $('#btnMQTT').prop('checked',jinfo.BROKER).change();
+        $('#btnHA').prop('checked',jinfo.HA).change();
         $('#btnDOM').prop('checked',jinfo.BOX).change();
         $('#URL_action1').val(jinfo.URL_ACT1);
         $('#URL_action2').val(jinfo.URL_ACT2);
         $('#URL_action3').val(jinfo.URL_ACT3);
+        $('#URL_update').val(jinfo.URL_UPD);
         $("#ipMQTT").val(jinfo.SRVBROKER);
         $("#userMQTT").val(jinfo.UBROKER);
         $("#passMQTT").val(jinfo.PBROKER);
         $("#portMQTT").val(jinfo.PORTBROKER);
         $("#tempoMQTT").val(jinfo.TEMPOBROKER);
+        $("#prefixHA").val(jinfo.PREFIXHA);
+        $("#DDHTIME").val(jinfo.TEMPDDHT);
+        $("#offsetT").val(jinfo.OFT);
+        $("#offsetH").val(jinfo.OFH);
         $('#DispOff').val(String.fromCharCode(jinfo.CHAROFF));
         $('#intled').val(jinfo.LEDINT).trigger("input");
         $('#intled').rangeslider('update', true);
@@ -78,12 +87,17 @@ $.ajax({
         $('#pause').val(jinfo.PAUSE).trigger("input");
         $('#pause').rangeslider('update', true);
         $('#selectled3_color').val(jinfo.FXCOLOR);
+        $("#horlogeOn").val(pad(jinfo.HORON[0],2)+":"+pad(jinfo.HORON[1],2));
+        $("#horlogeOff").val(pad(jinfo.HOROFF[0],2)+":"+pad(jinfo.HOROFF[1],2));
+        $("#btnAutoOnOff").prop('checked',jinfo.HOO).change();
         fxcr=jinfo.CRFX;
         fxal=jinfo.ALFX;
         $('#CRAudio').val(jinfo.CRFXSOUND);
         $('#ALAudio').val(jinfo.ALFXSOUND);
         $('#CRACT').val(jinfo.ACTION[0]);
         $('#ALACT').val(jinfo.ACTION[1]);
+        $("#mqttTopicConfig").text(jinfo.TOPICCFG);
+
         validflag=jinfo.HFLAG;
         var charoff =jinfo.CHAROFF;
         if ( charoff == 32 ) $('#DispOff').attr("placeholder", "Espace");
@@ -163,7 +177,7 @@ $("#Config").submit(function(){
   TFlag.forEach(function(item){
   strFlag+=item;
   });
-  console.log($("#btnMQTT").prop('checked'));
+  console.log("debuf hoo : "+$("#btnAutoOnOff").prop('checked'));
 
   $.post('/Config',
        {
@@ -173,16 +187,17 @@ $("#Config").submit(function(){
   pause:$('#pause').val(),
   speed:$('#speed').val(),
   box:$('#btnDOM').prop('checked'),
+  tempoddht:$('#DDHTIME').val(),
   url1:$('#URL_action1').val(),
   url2:$('#URL_action2').val(),
   url3:$('#URL_action3').val(),
+  urlbox:$('#URL_update').val(),
   ntpserver:$('#inputNTP').val(),
   charoff:$('#DispOff').val().charCodeAt(0),
   crtext:$('#CRTEXT').val(),
   altext:$('#ALTEXT').val(),
   crtime:$('#CRTIME').val(),
-  clicbtn1 : $('#btn1_1').val()+","+$('#btn1_2').val()+","+$('#btn1_3').val()+",",
-  clicbtn2 : $('#btn2_1').val()+","+$('#btn2_2').val()+","+$('#btn2_3').val()+",",
+  clic: $('#btn1_1').val()+","+$('#btn1_2').val()+","+$('#btn1_3').val()+","+$('#btn2_1').val()+","+$('#btn2_2').val()+","+$('#btn2_3').val()+",",
   intled : $("#intled").val(),
   fxint : $("#fxintled").val(),
   color : $("#selectled3_color").val(),
@@ -194,9 +209,16 @@ $("#Config").submit(function(){
   ipbroker:$("#ipMQTT").val(),
   ubroker:$("#userMQTT").val(),
   pbroker:$("#passMQTT").val(),
+  prefixha:$("#prefixHA").val(),
+  ha:$("#btnHA").prop('checked'),
+  ofh:$('#offsetH').val(),
+  oft:$('#offsetT').val(),
   portbroker:$("#portMQTT").val(),
   tempobroker:$("#tempoMQTT").val(),
   action:$('#CRACT').val()+","+$('#ALACT').val()+",",
+  horon:$("#horlogeOn").val(),
+  horoff:$("#horlogeOff").val(),
+  hoo:$("#btnAutoOnOff").prop('checked'),
   flag:strFlag
 //  nzo:$("#selectZone option:selected").val()
    }, function(data) {
@@ -225,6 +247,12 @@ $('#btnMQTT').change(function () {
           if (check) $('#MQTT').removeClass("d-none");
           else $('#MQTT').addClass("d-none");
                 });
+
+  $('#btnHA').change(function () {
+    var check = $(this).prop('checked');
+    if (check) $('#MQTTHA').removeClass("d-none");
+    else $('#MQTTHA').addClass("d-none");
+          });
 $('#btnDOM').change(function () {
           var check = $(this).prop('checked');
           if (check) $('#box').removeClass("d-none");
@@ -262,6 +290,14 @@ $('#selectNotifLum').change(function () {
             }
             else $('#groupAUDIO1').addClass("d-none");
 });
+
+$('#btnAutoOnOff').change(function () {
+  var check = $(this).prop('checked');
+  if (check) $('#groupOnOff').removeClass("d-none");
+  else $('#groupOnOff').addClass("d-none");
+
+});
+
 //remplissage select
 $.each(boutons, function (value, text) {
 //  console.log("valeur :"+text);

@@ -77,6 +77,21 @@ var DEBUG=true;
 
 function checktime() {
   $.get('/Config?checktime');
+  update_Info();
+}
+
+function checknet() {
+  $.get('/Config?checknet',function(data){
+  console.log(data);
+  update_Info();
+  });
+}
+
+function sendConfigHA() {
+  $.get('/Config?mqttconfig',function(data){
+  console.log(data);
+  //update_Info();
+  });
 }
 
 function goConfig() {
@@ -133,7 +148,11 @@ $.ajax({
          $('#typMat').text(typMat[jinfo.TYPEMATRICE]);
 
          //$("#groupLed output").val(jinfo.LEDINT);
-         $('#LUM').prop('checked',jinfo.LUM);
+         $('#LUM').prop('checked',jinfo.LUM);       
+         if (jinfo.PHOTOCELL) {
+          $('#LUM').prop("disabled", false);
+         }
+         else $('#LUM').prop("disabled", true);
          $('#infoLUM').text(jinfo.INTENSITY);
          $('#SEC').prop('checked',jinfo.SEC);
          $('#HOR').prop('checked',jinfo.HOR);
@@ -145,6 +164,32 @@ $.ajax({
          $('#last').text(unixToDate(jinfo.LASTSYNCHRO));
          $('#ddj').text(unixToDate(jinfo.DATE));
          $('#NTP').text(jinfo.NTPSERVER);
+         if (jinfo.NTPOK) {
+           $('#blocInfoNTP').addClass("bg-dark");
+           $('#blocInfoNTP').removeClass("bg-danger");
+           $('#NTP').addClass("text-dark");
+           $('#NTP').removeClass("text-danger");
+         }
+         else {
+            $('#blocInfoNTP').addClass("bg-danger");
+            $('#blocInfoNTP').removeClass("bg-dark");
+            $('#NTP').removeClass("text-dark");
+            $('#NTP').addClass("text-danger");
+          }
+          if (jinfo.NETOK) {
+            $("#net").text("En ligne");
+            $('#net').addClass("text-success");
+            $('#net').removeClass("text-danger");
+            $('#blocInfoNet').addClass("bg-success");
+            $('#blocInfoNet').removeClass("bg-danger");
+          }
+          else {
+            $('#net').addClass("text-danger");
+            $('#net').removeClass("text-success");
+            $("#net").text("Hors Ligne");
+            $('#blocInfoNet').addClass("bg-danger");
+            $('#blocInfoNet').removeClass("bg-success");
+          }
          $('#MAC').text(jinfo.MAC);
           $('#IP').text(jinfo.IP);
           $('#SSID').text(jinfo.SSID);
@@ -220,6 +265,14 @@ $.ajax({
                    DEBUG=false;
                    $('#debug').text("inactif");
                  }
+          if(jinfo.HA) {
+            $('#HAP').removeClass("d-none");
+            $('#HAtuto').removeClass("d-none");
+          }
+          else {
+            $('#HAP').addClass("d-none");
+            $('#HAtuto').addClass("d-none");
+          }
           if(jinfo.PHOTOCELL) $('#photocell').text("Présent");
                   else $('#photocell').text("Absent");
           if(jinfo.DHT) { $('#dht').text("Présent");
@@ -247,6 +300,10 @@ $.ajax({
               $("#cardbox").removeClass("d-none");
               $('#IUACR').text(Actions[jinfo.ACTION[0]]);
               $('#IUAAL').text(Actions[jinfo.ACTION[1]]);
+              $('#infoaction1').text(jinfo.URL_ACT1);
+              $('#infoaction2').text(jinfo.URL_ACT2);
+              $('#infoaction3').text(jinfo.URL_ACT3);
+              $('#infoupdate').text(jinfo.URL_UPD);
             }
               else {
                 $('#boxinfo').text("Désactivée");
@@ -270,6 +327,7 @@ $.ajax({
 
           if (jinfo.BROKER) {
             $("#cardmqtt").removeClass("d-none");
+            $('#mqttState').text("activé");
             if (jinfo.STATEBROKER) {
               $("#infostatemqtt").text("Connexion OK");
               $("#infostatemqtt").removeClass("text-danger");
@@ -283,7 +341,9 @@ $.ajax({
             else $("#infousermqtt").text("Serveur MQTT anonyme");
             $("#infotempomqtt").text(jinfo.TEMPOBROKER);
             $("#infotopicS").text(jinfo.TOPIC);
+            $("#infotopicO").text(jinfo.TOPICOPT);
             $("#infotopicP").text(jinfo.TOPICSTATE);
+            $("#predisco").text(jinfo.PREFIXHA);
           }
           else {
               $("#cardmqtt").addClass("d-none");
@@ -381,11 +441,60 @@ $.ajax({
          $('#Temp').text(jinfo.TEMP);
          $('#Hum').text(jinfo.HUM);
          $('#infoLUM').text(jinfo.INTENSITY);
-         if (jinfo.INFO=="200") {
+         if (jinfo.BROKER) {
+         if (jinfo.STATEBROKER) {
+           $('#blocInfoMQTT').removeClass("bg-danger");
+           $('#blocInfoMQTT').removeClass("bg-dark");
+           $('#blocInfoMQTT').addClass("bg-success");
+           $("#infostatemqtt").text("Connexion OK");
+           $("#infostatemqtt").removeClass("text-danger");
+         }
+         else {
+           $("#infostatemqtt").addClass("text-danger");
+           $("#infostatemqtt").text("Erreur Connexion");
+           $('#blocInfoMQTT').removeClass("bg-dark");
+           $('#blocInfoMQTT').removeClass("bg-success");
+           $('#blocInfoMQTT').addClass("bg-danger");
+         }
+       }
+       else {
+         $('#blocInfoMQTT').removeClass("bg-danger");
+         $('#blocInfoMQTT').removeClass("bg-success");
+         $('#blocInfoMQTT').addClass("bg-dark");
+         $('#mqttState').text("désactivé");
+       }
+         if (jinfo.NTPOK) {
+           $('#blocInfoNTP').addClass("bg-dark");
+           $('#blocInfoNTP').removeClass("bg-danger");
+           $('#NTP').addClass("text-dark");
+           $('#NTP').removeClass("text-danger");
+         }
+         else {
+            $('#blocInfoNTP').addClass("bg-danger");
+            $('#blocInfoNTP').removeClass("bg-dark");
+            $('#NTP').removeClass("text-dark");
+            $('#NTP').addClass("text-danger");
+          }
+          if (jinfo.NETOK) {
+            $("#net").text("En ligne");
+            $('#net').addClass("text-success");
+            $('#net').removeClass("text-danger");
+            $('#blocInfoNet').addClass("bg-success");
+            $('#blocInfoNet').removeClass("bg-danger");
+          }
+          else {
+            $('#net').addClass("text-danger");
+            $('#net').removeClass("text-success");
+            $("#net").text("Hors Ligne");
+            $('#blocInfoNet').addClass("bg-danger");
+            $('#blocInfoNet').removeClass("bg-success");
+          }
+         var httpcode=parseInt(jinfo.INFO);
+         if (httpcode==200) {
          $('#infoEtatURL').text("derniére requéte URL : OK");
        }
          else {
-            $('#infoEtatURL').text("derniére requéte URL : Erreur ");
+            $('#infoEtatURL').text("derniére requéte URL : Erreur ( code  "+jinfo.INFO+" )");
          }
        }
       }
@@ -505,6 +614,7 @@ num:numeroPiste,
 nzo:$("#selectZone option:selected").val(),
 fio:fio,
 anim:animation,
+cycle:$("#cycle").val(),
 type:typ,
 pause:P,
 ledfx:fxled,
@@ -567,7 +677,7 @@ if (key=="LUM") checkLum();
 if (key=="LED") checkLed();
 if (key=="INT" || key=="COLOR")   val=$(this).val();
 else if (key=="BRI")   { val=$(this).val()+"&COLOR="+$("#COLOR").val();key="LEDINT";}
-else if (key=="TIMEREV")  { val=$("#blocAl h1").text()+":";}
+else if (key=="TIMEREV")  { val=$("#blocAl h1").text();}
 else if (key=="REV")   val=false;
 else if (key=="ALD") val=valeur;
 else val=$(this).prop('checked');
@@ -739,6 +849,7 @@ $( document ).ready(function() {
 getInfo();
 getHisto();
 infoJson();
+update_Info()
 $('#LUM').on('change',Options);
 $('#SEC').on('change',Options);
 $('#HOR').on('change',Options);

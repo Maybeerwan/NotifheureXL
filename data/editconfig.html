@@ -25,13 +25,13 @@
             <a class="nav-link" href="#Config">Options <span class="sr-only">(current)</span></a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Fonctions</a>
+            <a class="nav-link" href="#fonctions">Fonctions</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Communications</a>
+            <a class="nav-link" href="#comm">Communications</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#">Configurations</a>
+            <a class="nav-link" href="#conf">Configurations</a>
           </li>
 
         </ul>
@@ -63,6 +63,7 @@
   <small class="text-muted">Permets de configurer les options matérielles disponibles</small>
 </div>
 <div class="form-group">
+<h4 class="text-primary">Options Boutons</h4>
     <div class="custom-control custom-checkbox">
       <input type="checkbox" class="custom-control-input" id="bouton1"  aria-describedby="bout1Help" disabled>
       <label class="custom-control-label text-info" for="bouton1">Bouton 1</label>
@@ -89,7 +90,6 @@
   </div>
     </div>
 </div>
-
 <div class="form-group">
     <div class="custom-control custom-checkbox">
       <input type="checkbox" class="custom-control-input" id="bouton2"  aria-describedby="bout2Help" disabled>
@@ -117,6 +117,7 @@
   </div>
     </div>
 </div>
+<h4 class="text-primary">Option Notification Visuelle</h4>
 <div class="form-group">
       <label for="selectNotifLum" class="text-info">Type Notification Visuelle :</label>
       <select class="form-control" id="selectNotifLum" aria-describedby="notifLumHelp" disabled>
@@ -170,7 +171,7 @@
   </div>
     </div>
 
-
+<h4 class="text-primary">Option Notification Audio</h4>
         <div class="form-group">
               <label for="selectNotifAud" class="text-info">Type Notification Audio :</label>
               <select class="form-control" id="selectNotifAud" aria-describedby="notifAudHelp" disabled>
@@ -180,29 +181,57 @@
                 <option value=3>Autre / Relais</option>
               </select>
               <small id="notifAudHelp" class="form-text text-muted">Le type de notification visuel installé.( modifiable dans SETUP )</small>
+          </div>
+        <div class="card border-info mx-auto mb-3 d-none" style="max-width: 40rem;" id="AUD0">
+            <div class="card-header text-center bg-info text-white">Parametre pour : <sapn id="infovisuelaudio"></span></div>
+            <div class="card-body">
+              <div id="groupAUDIO1" class="d-none">
+              <div class="form-group">
+              <label for="CRAudio" class="text-info">Musique par défaut ( minuteur )</label>
+              <select class="custom-select" id="CRAudio">
+              </select>
+              </div>
+              <div class="form-group">
+              <label for="ALAudioL" class="text-info">Musique par défaut ( Alarme )</label>
+              <select class="custom-select" id="ALAudio">
+              </select>
+              </div>
             </div>
-            <div class="card border-info mx-auto mb-3" style="max-width: 40rem;" id="AUD0">
-                <div class="card-header text-center bg-info text-white">Parametre pour : <sapn id="infovisuelaudio"></span></div>
-                <div class="card-body">
-                  <div id="groupAUDIO1" class="d-none">
-                  <div class="form-group">
-                  <label for="CRAudio" class="text-info">Musique par défaut ( minuteur )</label>
-                  <select class="custom-select" id="CRAudio">
-                  </select>
-                  </div>
-                  <div class="form-group">
-                  <label for="ALAudioL" class="text-info">Musique par défaut ( Alarme )</label>
-                  <select class="custom-select" id="ALAudio">
-                  </select>
-                  </div>
-                </div>
-                </div>
-              </div>  <!-- fin carte audio-->
+            </div>
+          </div>  <!-- fin carte audio-->
 </div>
+
 </div> <!-- fin row -->
+<div class="row mb-2">
+<div class="col">
+  <h4 class="text-primary">Option DHT</h4>
+  <div class="input-group">
+    <div class="input-group-prepend">
+  <div class="input-group-text text-info">offset Température: </div>
+  </div>
+  <input type="number" class="form-control" id="offsetT" aria-describedby="offsetTHelp" placeholder="0" step=0.01 min=-10 max=10 val=0.00>
+  </div>
+  <small id="offsetTHelp" class="form-text text-muted">Correction température à appliquer</small>
+  <div class="input-group">
+    <div class="input-group-prepend">
+  <div class="input-group-text text-info">Offset Humidité: </div>
+  </div>
+  <input type="number" class="form-control" id="offsetH" aria-describedby="offsetHHelp" placeholder="0" step=0.01 min=-10 max=10 val=0.00>
+  </div>
+  <small id="offsetHHelp" class="form-text text-muted">Correction Humidité à appliquer </small>
+  <div class="input-group">
+    <div class="input-group-prepend">
+  <div class="input-group-text text-info">Temps par défaut pour Affichage info DHT sur NotifHeure: </div>
+  </div>
+  <input type="number" class="form-control" id="DDHTIME" aria-describedby="dhtTimeHelp" placeholder="5"  min="1" max="120">
+  </div>
+  <small id="dhtTimeHelp" class="form-text text-muted">Temps par défaut ( en minutes ) pour l'affichage des informations du DHT sur ecran NotifHeure. </small>
+
+</div>
+</div>
 
 
-<div class="row">
+<div class="row" id="fonctions">
     <div class="col-md-12">
       <div class="alert alert-dark"><h4 >Fonctions :</h4>
       <small class="text-muted">Permets de configurer les fonctions : Minuteur / Alarme </small>
@@ -237,18 +266,32 @@
 <input type="text" class="form-control" id="ALTEXT" aria-describedby="inpalHelp" placeholder="Fin Alarme !">
 </div>
   <small id="impalHelp" class="form-text text-muted">Texte à afficher en fin d'alarme'.</small>
-  <div class="input-group">
-    <div class="input-group-prepend">
-  <div class="input-group-text text-info">Heure par défaut : </div>
-  </div>
-  <input type="time" class="form-control" id="ALTIME" aria-describedby="altimeHelp" placeholder="06:00" style="max-width:50px">
-  </div>
 
+
+  <h4 class="text-primary">Extinction Horloge Auto</h4>
+  <small class="text-muted my-2">Cette option permet de programmer l'affichage de l'horloge. Peut etre utile dans une chambre par exemple , pour ne pas eclairer la nuit.</small>
+<div class="form-group">
+<div class="custom-control custom-checkbox mt-3">
+  <input type="checkbox" class="custom-control-input" id="btnAutoOnOff"  aria-describedby="btnAutoOnOffHelp"/>
+  <label class="custom-control-label text-info" for="btnAutoOnOff">Programmation affichage horloge</label>
+</div>
+<small id="btnAutoOnOffHelp" class="form-text">Activation / désactivation de l'affichage de l'horloge . Le notifHeureXL permet toujours d'afficher les messages.</small>
+</div>
+<div id="groupOnOff" class="d-none">
+  <div class="form-group">
+    <label for="horlogeOn" class="text-info">Activation Affichage Horloge :</label>
+    <input type="time" id="horlogeOn" class="form-control text-primary" value="06:00" style="width:100px;"/>
+  </div>
+  <div class="form-group">
+    <label for="horlogeOff" class="text-info">Désactivation Affichage Horloge :</label>
+    <input type="time" id="horlogeOff" class="form-control text-primary" value="22:00" style="width:100px;"/>
+  </div>
+</div>  <!-- fin groupe time on/off-->
 </div>
 </div> <!-- fin row -->
-<div class="row">
+<div class="row" id="comm">
 <div class="col">
-  <div class="alert alert-dark"><h4 >Communication :</h4>
+  <div class="alert alert-dark"><h4 >Communications :</h4>
   <small class="text-muted">Permets de configurer les fonctionnalités de communication : MQTT / URL vers BOX </small>
 </div>
       <h4 class="text-primary">Communication MQTT</h4>
@@ -259,13 +302,15 @@
       </div>
     <small id="btnMQTTHelp" class="form-text text-muted">Activation / désactivation protocole MQTT</small>
   </div>
-  <div class="card border-warning mx-auto mb-3"  id="MQTT" style="max-width: 40rem;">
+  <div id="MQTT">
+    <p class="text-warning">Topic Configuration : <span id="mqttTopicConfig" class="text-dark"></span></p>
+  <div class="card border-warning mx-auto mb-3"  style="max-width: 40rem;">
       <div class="card-header text-center bg-warning text-white">Paramétrage Client MQTT</div>
       <div class="card-body">
         <h6 class="text-info">L'activation du client MQTT, entraine le redémarrage du notifHeure</h6>
         <div class="input-group">
           <div class="input-group-prepend">
-        <div class="input-group-text text-info">IP Serveur MQTT : </div>
+        <div class="input-group-text text-warning">IP Serveur MQTT : </div>
         </div>
         <input type="text" class="form-control" id="ipMQTT" aria-describedby="ipMQTTHelp" placeholder="192.168.0.1">
         </div>
@@ -298,10 +343,29 @@
         <input type="number" class="form-control" id="tempoMQTT" aria-describedby="tempoMQTTHelp" placeholder="60">
         </div>
         <small id="tempoMQTTHelp" class="form-text text-muted">Temporisation publications MQTT - entre 10 et 600 secondes ( 60 secondes par défaut )</small>
+
       </div>
-
     </div>
-
+    <div class="form-group">
+      <div class="custom-control custom-checkbox">
+        <input type="checkbox" class="custom-control-input" id="btnHA"  aria-describedby="btnHAHelp">
+        <label class="custom-control-label text-info" for="btnHA">Home Assistant : Activer publication pour MQTT discovery</label>
+      </div>
+    <small id="btnMQTTHelp" class="form-text text-muted">Cette option , permet d'acitiver la publication du Topic config , pour Home Assistant. Afin de créer automatiquement les entités du NotifHeureXL au sein de HA si la fonction auto discovery de MQTT est activé.</small>
+  </div>
+  <div class="card border-warning mx-auto mb-3"  id="MQTTHA" style="max-width: 40rem;">
+    <div class="card-header text-center bg-warning text-white">Paramétrage Audo discovery Home Assistant</div>
+    <div class="card-body">
+      <div class="input-group">
+        <div class="input-group-prepend">
+      <div class="input-group-text text-warning">Prefix Discovery pour Home Assistant : </div>
+      </div>
+      <input type="text" class="form-control" id="prefixHA" aria-describedby="prefixHAHelp" placeholder="homeassistant">
+      </div>
+      <small id="prefixHAHelp" class="form-text text-muted">Prefix Home assistant pour importation automatique des entités Notifheure  ( homeassistant par défaut )</small>
+    </div>
+   </div> 
+   </div>
 </div>
 </div> <!-- fin row -->
 <div class="row">
@@ -319,6 +383,7 @@
     <div class="card border-primary mx-auto mb-2 " id="boxUrlActions" style="max-width: 40rem;">
     <div class="card-header text-center bg-primary text-white">URL Actions</div>
     <div class="card-body small">
+      <small>Les chaines de moins de 8 caractéres ne sont pas prises en comptes.</small>
       <div class="input-group">
     <div class="input-group-prepend">
     <div class="input-group-text text-primary">URL Action 1 : </div>
@@ -368,10 +433,12 @@
            </div>
        </div>
        </div>
-<!--
-       <div class="card border-dark mx-auto mb-2 " id="boxUrlUpdate" style="max-width: 40rem;">
+
+    <div class="card border-dark mx-auto mb-2 " id="boxUrlUpdate" style="max-width: 40rem;">
        <div class="card-header text-center bg-dark text-light">URL Update</div>
        <div class="card-body small">
+        <p>Url a mettre à jour pour remonter info mise a jour notifheure</p>
+        <p>(par exemple mise a jour plugin jeedom / nextom - renseigné id commande rafraichir)</p>
      <div class="input-group">
      <div class="input-group-prepend">
      <div class="input-group-text text-info">URL Update : </div>
@@ -381,15 +448,15 @@
      <small id="upHelp" class="form-text text-muted">Renseigner l'URL qui servira à mettre à jour une valeur , à intervalle fixe</small>
      </div>
    </div>
- -->
+
 
 </div>  <!-- fin box dom -->
 </div>
 </div> <!-- fin row -->
 
-<div class="row">
+<div class="row" id="conf">
 <div class="col">
-  <div class="alert alert-dark"><h4 >Configuration :</h4>
+  <div class="alert alert-dark"><h4 >Configurations :</h4>
   <small class="text-muted">Permets de configurer les paramétres systémes </small>
 </div>
 <div class="input-group">
@@ -424,11 +491,11 @@
 </div>
 <div class="input-group">
   <div class="input-group-prepend ">
-<div class="input-group-text text-info">Caractére par défaut : </div>
+<div class="input-group-text text-info">Caractére par défaut / Display Off : </div>
 </div>
 <input type="text" class="form-control col-2" id="DispOff" aria-describedby="carHelp" size="2" maxlength="1" placeholder="vide" >
 </div>
-<small id="carHelp" class="form-text text-muted ">Sélection du Caractére  par défaut sur l'ecran Off . Valeur par défaut : vide.</small>
+<small id="carHelp" class="form-text text-muted ">Sélection du Caractére  par défaut sur l'ecran Off . Valeur par défaut : vide. Ce caractére permet de visualiser que le NotifHeureXL est toujours en service ( par exemple par la présence d'un . (point ).</small>
 <div class="input-group">
   <div class="input-group-prepend">
 <div class="input-group-text text-info">Serveur NTP : </div>
