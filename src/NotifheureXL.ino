@@ -205,6 +205,8 @@ const char* www_password = "notif";
 // Max zone à gerer
 #define MAX 8
 
+#define MAX_TIME_REV 10 // nombre de réveil x 2 (h:m)
+
 //*********************************************
 //********** AUDIO OUT BUZZER / HP ************
 //*********************************************
@@ -273,6 +275,21 @@ struct sHardConfig {
 };
 sHardConfig hardConfig;
 
+struct sAlame {				
+  bool actif;				// Actif
+  byte heure;				// Heure
+  byte minute;
+  bool alDay[7];              // jour alarme
+  char msgAlarme[80];         // Message a affiché pour alarme
+  byte fxAL;                  // fx Alarme pour led
+  byte fxSoundAL;             // fx Sound Alarme par defaut
+  byte action;             // Action pour minuteur / alarme
+  int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
+  int pisteMP3;
+  bool led;
+};
+sAlame Alarmes[5];  // Nombre d'alarmes
+
 // software config  ( sauvegarde SPIFFS )
 struct sConfigSys {
 //  bool setup;                // verifie si setup initial ok
@@ -298,7 +315,7 @@ struct sConfigSys {
   bool REV;
   bool DHT;                   // True si affichage DHT demandé sur notif
   byte tempDDHT;              // Tempo Display DHT
-  byte timeREV[2];            // Heure reveil
+  byte timeREV[MAX_TIME_REV];            // Heure reveil [5réveilx2 (H:m)]
   char msgAlarme[80];         // Message a affiché pour alarme
   char msgMinuteur[80];       // Message a affiché pour fin de minuteur
   bool LED;                   // etat LED
@@ -1001,6 +1018,145 @@ bool checkFlag(char F) {
   if ( flags.indexOf(F)<0) return false;
   else return true;
 }
+//******************************************************************************************************************//
+"{\"NbAlarmes\":\"1\",\"alarmes\":[{\"actif\":\"true\",\"heure\":\"7\",\"minute\",\"ALDAY\":[\"true\",\"true\",\"true\",\"true\",\"true\",\"true\",\"true\",\"true\"],\"msgAlarme\":\"Test de message\",\"fxAL\":\"2\",\"fxSoundAL\":\"2\",\"action\":\"2\",\"volumeAudio\":\"30\",\"pisteMP3\":\"15\",\"led\":\"true\"}]}"
+
+
+{
+"NbAlarmes":"1",
+"alarmes":[{"actif":"true",
+"heure":"7",
+"minute",
+"ALDAY":["true",
+		"true",
+		"true",
+		"true",
+		"true",
+		"true",
+		"true",
+		"true"],
+"msgAlarme":"Test de message",
+"fxAL":"2",
+"fxSoundAL":"2",
+"action":"2",
+"volumeAudio":"30",
+"pisteMP3":"15",
+"led":"true"}]}
+
+struct sAlame {				
+  bool actif;				// Actif
+  byte heure;				// Heure
+  byte minute;
+  bool alDay[7];              // jour alarme
+  char msgAlarme[80];         // Message a affiché pour alarme
+  byte fxAL;                  // fx Alarme pour led
+  byte fxSoundAL;             // fx Sound Alarme par defaut
+  byte action;             // Action pour minuteur / alarme
+  int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
+  int pisteMP3;
+  bool led;
+};
+
+\"fxAL\":\"2\",\"fxSoundAL\":\"2\",\"action\":\"2\",\"volumeAudio\":\"30\",\"pisteMP3\":\"15\",\"led\":true
+
+#define NB_ALARMES 1
+const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES*JSON_ARRAY_SIZE(8) + NB_ALARMES*JSON_OBJECT_SIZE(10) + 1;
+
+
+// Gestion des alarmes
+void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
+
+  // Open file 
+	File file = LittleFS.open(fileAlarmes, "r");
+	if (!file) {
+		msgDebug+="Fonction load : Fichier Alarmes absent ---";
+	}
+	DynamicJsonDocument docAlarmes(capacityAlarmes);
+	DeserializationError err = deserializeJson(docAlarmes, file);
+	if (err) {
+		msgDebug+="deserializeJson(alarmes) failed: ";
+		sgDebug+=err.c_str();
+	}
+	
+	byte nbAlarme = docAlarmes["NbAlarmes"] | 0; // si pas de chiffre alors pas d'alarmes
+	
+	if(nbAlarme != NB_ALARMES)
+	{
+		msgDebug+="Nombre alarmes différent";
+	}
+	
+	JsonArray jsonAlarmes = docAlarmes["alarmes"];
+	
+	for(int i=0; i<nbAlarme; i++) {
+	JsonObject objAlarmes = jsonAlarmes[i];
+	
+	// parametre
+	alarmes[i].actif = objAlarmes["actif"] | false;		
+	alarmes[i].heure = objAlarmes["heure"] | 0;
+	alarmes[i].minute = objAlarmes["minute"] | 0;
+	// alarme jours
+    alarmes[i].alDay[0] = objAlarmes["ALDAY"][0] | false;
+    alarmes[i].alDay[1] = objAlarmes["ALDAY"][1] | false;
+    alarmes[i].alDay[2] = objAlarmes["ALDAY"][2] | false;
+    alarmes[i].alDay[3] = objAlarmes["ALDAY"][3] | false;
+    alarmes[i].alDay[4] = objAlarmes["ALDAY"][4] | false;
+    alarmes[i].alDay[5] = objAlarmes["ALDAY"][5] | false;
+    alarmes[i].alDay[6] = objAlarmes["ALDAY"][6] | false;
+    alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
+	
+	strlcpy(alarmes[i].msgAlarme,objAlarmes["msgAlarme"], sizeof(alarmes[i].msgAlarme));
+	alarmes[i].fxAL = objAlarmes["fxAL"] ;         
+	alarmes[i].fxSoundAL = objAlarmes["fxSoundAL"];    
+	alarmes[i].action = objAlarmes["action"];     
+	alarmes[i].volumeAudio = objAlarmes["volumeAudio"] ;	
+	alarmes[i].pisteMP3 = objAlarmes["pisteMP3"] ;
+	alarmes[i].led = objAlarmes["led"] | false;
+	}
+
+	file.close();
+}
+
+String createAlarmeJson(sAlame  &alarmes,bool flagCreate=false) {
+  String json;
+  DynamicJsonDocument doc(capacityAlarmes);
+  
+  doc["NbAlarmes"] = NB_ALARMES;
+  
+  JsonArray docAlarmes = doc.createNestedArray("alarmes");
+
+  for (int i=0;i<NB_ALARMES;i++) {
+  
+	JsonObject objAlarmes = docAlarmes.createNestedObject();
+
+	// parametre
+	objAlarmes["actif"] = alarmes[i].actif;		
+	objAlarmes["heure"] = alarmes[i].heure;
+	objAlarmes["minute"] = alarmes[i].minute;
+	// alarme jours
+	JsonArray aday = objAlarmes.createNestedArray("ALDAY");
+    aday.add(alarmes[i].alDay[0]);
+    aday.add(alarmes[i].alDay[1]);
+    aday.add(alarmes[i].alDay[2]);
+    aday.add(alarmes[i].alDay[3]);
+    aday.add(alarmes[i].alDay[4]);
+    aday.add(alarmes[i].alDay[5]);
+    aday.add(alarmes[i].alDay[6]);
+    aday.add(alarmes[i].alDay[7]);   
+	
+	objAlarmes["msgAlarme"] = alarmes[i].msgAlarme;
+	objAlarmes["fxAL"] = alarmes[i].fxAL;         
+	objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
+	objAlarmes["action"] = alarmes[i].action;     
+	objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
+	objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
+	objAlarmes["led"] = alarmes[i].led;
+
+}
+  // envoie alarmes json
+  serializeJsonPretty(docHisto,json);
+  return json;
+}
+//******************************************************************************************************************//
 
 // JSON
 // load config JSON Suystem
@@ -1049,8 +1205,10 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
   config.offsetT=docConfig["OFT"] | 0;
   config.offsetH=docConfig["OFH"] | 0;
   config.tempDDHT=docConfig["TEMPDDHT"] | TEMPODDHT;
-  config.timeREV[0]=docConfig["TIMEREV"][0] | 7;
-  config.timeREV[1]=docConfig["TIMEREV"][1] | 0;
+  for (int i=0;i<MAX_TIME_REV;i++) {
+      config.timeREV[i]=docConfig["TIMEREV"][i] | 0;
+  }
+
   config.alDay[0]=docConfig["ALDAY"][0] | false;
   config.alDay[1]=docConfig["ALDAY"][1] | false;
   config.alDay[2]=docConfig["ALDAY"][2] | true;
