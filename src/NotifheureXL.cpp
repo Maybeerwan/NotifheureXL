@@ -1,4 +1,5 @@
 
+#include <Arduino.h>
 // **********************************************
 //***********************************************
 //*********** NOTIFHEURE XL *********************
@@ -81,10 +82,10 @@ const char* www_password = "notif";
 //#define HARDWARE_TYPE MD_MAX72XX::GENERIC_HW   //***
 // ***************************************************
 // Branchement des matrices
-#define CLK_PIN   14  // SCK (D5 wemos D1R1 ou mini )
-#define DATA_PIN  13  // MOSI ( D7 wemos D1R1 ou mini )
+#define CLK_PIN   D5  // SCK (D5 wemos D1R1 ou mini )
+#define DATA_PIN  D7  // MOSI ( D7 wemos D1R1 ou mini )
 //#define CS_PIN    15  // SS ou CS ( D10 sur D1R1  ou D8 sur Mini )
-#define CS_PIN    12  // SS ( D10 sur D1R1  ou D6  sur Mini )  ---- Pour NOtifheure 1
+#define CS_PIN    D8  // SS ( D10 sur D1R1  ou D6  sur Mini )  ---- Pour NOtifheure 1
 // si modif CS_PÏN modifier AUDIOPINRX 15 !!!!!
 // Pour info ancienne version NotifHeure
 //#define CLK_PIN   14
@@ -94,7 +95,7 @@ const char* www_password = "notif";
 // Options notif visuelle Si installé
 //************************************
 // PIN Notif visuel ( led , neopixel ou relais )
-#define LEDPIN 5    // Sortie dédié notification lumineuse
+#define LEDPIN D0    // Sortie dédié notification lumineuse
 //************************
 //option NeoPixel
 // Nombre de led si Ring ou strip neopixel en place
@@ -107,11 +108,11 @@ const char* www_password = "notif";
 // Notification sonore
 // *************************************
 // PIN AUDIO ( AUDIOPINTX = MP3PLAYER TX ou Sortie HP / Buzzer ou sortie RElais ou sortie Digital)
-#define AUDIOPINTX 4    // Sortie principale pour Audio
+#define AUDIOPINTX D2    // Sortie principale pour Audio
 // Si DFPLAYER MP3
 // PINAUDIORX : uniquement our MP3player
 // PIN qui serviront pour la communication série sur le module ESP
-#define AUDIOPINRX 12   // Entree pour DFP audio uniquement
+#define AUDIOPINRX D1   // Entree pour DFP audio uniquement
 //#define AUDIOPINRX 15   // Inversé Entree pour DFP audio uniquement  si CS_PIN sur 12
 
 // *******************
@@ -121,13 +122,13 @@ const char* www_password = "notif";
 // *** PIN ******
 // ***************
 // PIN DHT
-#define dhtpin 16 // GPIO16  egale a D2 sur WEMOS D1R1  ou D0 pour mini ( a verifier selon esp )
+#define dhtpin D3 // GPIO16  egale a D2 sur WEMOS D1R1  ou D0 pour mini ( a verifier selon esp )
 // Entree analogique pour auto luminosité
 // PIN Analogique pour photocell
 #define PINAUTO_LUM A0
 //Boutons
-#define PIN_BTN1 2
-#define PIN_BTN2 0
+#define PIN_BTN1 D4
+#define PIN_BTN2 D6
 // ************************
 // *********** FIN PIN ****
 // ************************
@@ -205,8 +206,6 @@ const char* www_password = "notif";
 // Max zone à gerer
 #define MAX 8
 
-#define MAX_TIME_REV 10 // nombre de réveil x 2 (h:m)
-
 //*********************************************
 //********** AUDIO OUT BUZZER / HP ************
 //*********************************************
@@ -251,7 +250,7 @@ const unsigned long MAGICEEP=12379025;
 const uint32_t MAGICEP=0xAABBCCDD;
 const byte EP_VERSION = 1;
 const int eeAddress = 64;
-const unsigned long _refTime=1514800000;
+const long _refTime=1514800000;
 const unsigned long _refTimeHigh=2081030400;
 #define BUFFEEP 280
 //Hard Config  ( sauvé en EEPROM )
@@ -274,21 +273,6 @@ struct sHardConfig {
   int typeLED;
 };
 sHardConfig hardConfig;
-
-struct sAlame {				
-  bool actif;				// Actif
-  byte heure;				// Heure
-  byte minute;
-  bool alDay[7];              // jour alarme
-  char msgAlarme[80];         // Message a affiché pour alarme
-  byte fxAL;                  // fx Alarme pour led
-  byte fxSoundAL;             // fx Sound Alarme par defaut
-  byte action;             // Action pour minuteur / alarme
-  int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
-  int pisteMP3;
-  bool led;
-};
-sAlame Alarmes[5];  // Nombre d'alarmes
 
 // software config  ( sauvegarde SPIFFS )
 struct sConfigSys {
@@ -315,7 +299,7 @@ struct sConfigSys {
   bool REV;
   bool DHT;                   // True si affichage DHT demandé sur notif
   byte tempDDHT;              // Tempo Display DHT
-  byte timeREV[MAX_TIME_REV];            // Heure reveil [5réveilx2 (H:m)]
+  byte timeREV[2];            // Heure reveil [5réveilx2 (H:m)]
   char msgAlarme[80];         // Message a affiché pour alarme
   char msgMinuteur[80];       // Message a affiché pour fin de minuteur
   bool LED;                   // etat LED
@@ -839,7 +823,24 @@ sprite[] =
   { roll2, W_ROLL2, F_ROLL2 }
 };
 
+// Gestion des alarmes //
+#define NB_ALARMES 1
+const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES*JSON_ARRAY_SIZE(8) + NB_ALARMES*JSON_OBJECT_SIZE(10) + 1;
+struct sAlame {				
+  bool actif;				// Actif
+  byte heure;				// Heure
+  byte minute;
+  bool alDay[7];              // jour alarme
+  char msgAlarme[80];         // Message a affiché pour alarme
+  byte fxAL;                  // fx Alarme pour led
+  byte fxSoundAL;             // fx Sound Alarme par defaut
+  byte action;             // Action pour minuteur / alarme
+  int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
+  int pisteMP3;
+  bool led;
+};
 
+sAlame Alarmes[5];  // Nombre d'alarmes
 
  //void setType() {MD_MAX72XX::setModuleType(HARDWARE_TYPE);}
 /*************************
@@ -1019,51 +1020,8 @@ bool checkFlag(char F) {
   else return true;
 }
 //******************************************************************************************************************//
-"{\"NbAlarmes\":\"1\",\"alarmes\":[{\"actif\":\"true\",\"heure\":\"7\",\"minute\",\"ALDAY\":[\"true\",\"true\",\"true\",\"true\",\"true\",\"true\",\"true\",\"true\"],\"msgAlarme\":\"Test de message\",\"fxAL\":\"2\",\"fxSoundAL\":\"2\",\"action\":\"2\",\"volumeAudio\":\"30\",\"pisteMP3\":\"15\",\"led\":\"true\"}]}"
 
-
-{
-"NbAlarmes":"1",
-"alarmes":[{"actif":"true",
-"heure":"7",
-"minute",
-"ALDAY":["true",
-		"true",
-		"true",
-		"true",
-		"true",
-		"true",
-		"true",
-		"true"],
-"msgAlarme":"Test de message",
-"fxAL":"2",
-"fxSoundAL":"2",
-"action":"2",
-"volumeAudio":"30",
-"pisteMP3":"15",
-"led":"true"}]}
-
-struct sAlame {				
-  bool actif;				// Actif
-  byte heure;				// Heure
-  byte minute;
-  bool alDay[7];              // jour alarme
-  char msgAlarme[80];         // Message a affiché pour alarme
-  byte fxAL;                  // fx Alarme pour led
-  byte fxSoundAL;             // fx Sound Alarme par defaut
-  byte action;             // Action pour minuteur / alarme
-  int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
-  int pisteMP3;
-  bool led;
-};
-
-\"fxAL\":\"2\",\"fxSoundAL\":\"2\",\"action\":\"2\",\"volumeAudio\":\"30\",\"pisteMP3\":\"15\",\"led\":true
-
-#define NB_ALARMES 1
-const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES*JSON_ARRAY_SIZE(8) + NB_ALARMES*JSON_OBJECT_SIZE(10) + 1;
-
-
-// Gestion des alarmes
+// Chargement des alarmes
 void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
 
   // Open file 
@@ -1075,7 +1033,7 @@ void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
 	DeserializationError err = deserializeJson(docAlarmes, file);
 	if (err) {
 		msgDebug+="deserializeJson(alarmes) failed: ";
-		sgDebug+=err.c_str();
+		msgDebug+=err.c_str();
 	}
 	
 	byte nbAlarme = docAlarmes["NbAlarmes"] | 0; // si pas de chiffre alors pas d'alarmes
@@ -1102,7 +1060,7 @@ void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
     alarmes[i].alDay[4] = objAlarmes["ALDAY"][4] | false;
     alarmes[i].alDay[5] = objAlarmes["ALDAY"][5] | false;
     alarmes[i].alDay[6] = objAlarmes["ALDAY"][6] | false;
-    alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
+    // alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
 	
 	strlcpy(alarmes[i].msgAlarme,objAlarmes["msgAlarme"], sizeof(alarmes[i].msgAlarme));
 	alarmes[i].fxAL = objAlarmes["fxAL"] ;         
@@ -1116,7 +1074,7 @@ void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
 	file.close();
 }
 
-String createAlarmeJson(sAlame  &alarmes,bool flagCreate=false) {
+String createAlarmeJson(sAlame  *alarmes,bool flagCreate=false) {
   String json;
   DynamicJsonDocument doc(capacityAlarmes);
   
@@ -1141,7 +1099,7 @@ String createAlarmeJson(sAlame  &alarmes,bool flagCreate=false) {
     aday.add(alarmes[i].alDay[4]);
     aday.add(alarmes[i].alDay[5]);
     aday.add(alarmes[i].alDay[6]);
-    aday.add(alarmes[i].alDay[7]);   
+    // aday.add(alarmes[i].alDay[7]);   
 	
 	objAlarmes["msgAlarme"] = alarmes[i].msgAlarme;
 	objAlarmes["fxAL"] = alarmes[i].fxAL;         
@@ -1153,10 +1111,53 @@ String createAlarmeJson(sAlame  &alarmes,bool flagCreate=false) {
 
 }
   // envoie alarmes json
-  serializeJsonPretty(docHisto,json);
+  serializeJsonPretty(docAlarmes,json);
   return json;
 }
 //******************************************************************************************************************//
+
+//// Mesure DHT
+void GetTemp() {
+  int ModelDHT = 0 ;
+    temperature = dht.getTemperature() + configSys.offsetT;
+    humidity= dht.getHumidity() + configSys.offsetH;
+
+  if (isnan(humidity) || isnan(temperature)) {
+    _dht=false;
+    temperature = 0;
+    humidity= 0;
+    heatIndex = 0;
+    dewPoint = 0;
+    per = 0;
+  }
+  else {
+    _dht=true;
+    ModelDHT=dht.getModel();
+    heatIndex = dht.computeHeatIndex(temperature, humidity, false);
+    dewPoint = dht.computeDewPoint(temperature,humidity,false);
+    per = dht.computePerception(temperature, humidity,true);
+    stamp_DHT=now();
+  }
+
+   // Mise a jour des valeurs dht dans JSON
+    //DHTsensor
+
+    switch(ModelDHT) {
+      case 0 : Modele="Absent";
+      break;      
+      case 1 : Modele="DHT11";
+      break;
+      case 2 : Modele="DHT22";
+      break;
+      default : Modele="Inconnu";
+      break;
+    }
+
+  if (configSys.DEBUG) {
+      Serial.println("Valeur Sensor DHT :"+String(_dht));
+       Serial.println(" T:" + String(temperature) + "°C  H:" + String(humidity) + "%  I:" + String(heatIndex) + " D:" + String(dewPoint) + "  et per :"+ String(per));
+  }
+}
 
 // JSON
 // load config JSON Suystem
@@ -1205,9 +1206,8 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
   config.offsetT=docConfig["OFT"] | 0;
   config.offsetH=docConfig["OFH"] | 0;
   config.tempDDHT=docConfig["TEMPDDHT"] | TEMPODDHT;
-  for (int i=0;i<MAX_TIME_REV;i++) {
-      config.timeREV[i]=docConfig["TIMEREV"][i] | 0;
-  }
+  config.timeREV[0]=docConfig["TIMEREV"][0] | 0;
+  config.timeREV[1]=docConfig["TIMEREV"][1] | 0;
 
   config.alDay[0]=docConfig["ALDAY"][0] | false;
   config.alDay[1]=docConfig["ALDAY"][1] | false;
@@ -1216,7 +1216,7 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
   config.alDay[4]=docConfig["ALDAY"][4] | true;
   config.alDay[5]=docConfig["ALDAY"][5] | true;
   config.alDay[6]=docConfig["ALDAY"][6] | true;
-  config.alDay[7]=docConfig["ALDAY"][7] | false;
+  // config.alDay[7]=docConfig["ALDAY"][7] | false;
   config.charOff=docConfig["CHAROFF"] | ' ';
   config.timeAdjust=docConfig["TIMEADJUST"] | OFFSET_ADJUST;
   strlcpy(config.textnotif,docConfig["TEXTNOTIF"] | "Notif",sizeof(config.textnotif));
@@ -1434,46 +1434,6 @@ void saveConfigSys(const char *fileconfig,String json) {
    f.close();
 }
 
-//// Mesure DHT
-void GetTemp() {
-  int ModelDHT;
-    temperature = dht.getTemperature() + configSys.offsetT;
-    humidity= dht.getHumidity() + configSys.offsetH;
-
-  if (isnan(humidity) || isnan(temperature)) {
-    _dht=false;
-    temperature = 0;
-    humidity= 0;
-    heatIndex = 0;
-    dewPoint = 0;
-    per = 0;
-  }
-  else {
-    _dht=true;
-    ModelDHT=dht.getModel();
-    heatIndex = dht.computeHeatIndex(temperature, humidity, false);
-    dewPoint = dht.computeDewPoint(temperature,humidity,false);
-    per = dht.computePerception(temperature, humidity,true);
-    stamp_DHT=now();
-  }
-
-   // Mise a jour des valeurs dht dans JSON
-    //DHTsensor
-
-    switch(ModelDHT) {
-      case 1 : Modele="DHT11";
-      break;
-      case 2 : Modele="DHT22";
-      break;
-      default : Modele="Inconnu";
-      break;
-    }
-
-  if (configSys.DEBUG) {
-      Serial.println("Valeur Sensor DHT :"+String(_dht));
-       Serial.println(" T:" + String(temperature) + "°C  H:" + String(humidity) + "%  I:" + String(heatIndex) + " D:" + String(dewPoint) + "  et per :"+ String(per));
-  }
-}
 
 // fonction audio ( 0:none , 1 : Buzzer , 2 = MP3player , 4 = relais , 5 = sortie PIN digital)
 void audio(char action='P')
@@ -1871,6 +1831,205 @@ void createSecondes(char *Sec)
     *Sec = '\0'; // termine la chaine
 }
 
+
+int readPhotocell() {
+  int sensorValue;
+  sensorValue = analogRead(0); // read analog input pin 0
+  // inversion valeur sombre=0 et tres lumineur=1023
+  //sensorValue = 1023 - sensorValue;
+  // apres inversion 1023 signifie led au max ( sombre )
+  if (configSys.DEBUG) Serial.println("valeur sensorvalue : "+String(sensorValue));
+  return sensorValue;
+}
+
+// luminosite auto
+// fonction reglage auto luminosite
+uint8_t  lumAuto() {
+  uint8_t lum;
+  int sv;
+    if (_photocell) {
+    sv=readPhotocell();
+    if (configSys.DEBUG) Serial.println("valeur brut "+String(sv));
+    lum= map(sv, 0,1023 , 0, 15);
+    }
+  else lum=configSys.intensity;
+  if (configSys.DEBUG) Serial.println("valeur lum: "+String(lum));
+  return lum;
+}
+
+void cmdLum(bool val,byte I=configSys.intensity) {
+  String msgInfo="";
+  configSys.LUM=val;
+  if (val) {
+    lumAuto();
+    msgInfo="Auto";
+  } else {
+    configSys.intensity=I;
+    switch (I) {
+      case 0 : msgInfo="Min";
+      break;
+      case 15 : msgInfo="Max";
+      break;
+      default:msgInfo="L : "+String(I);
+      break;
+    }
+  }
+ // LuN=configSys.intensity;
+  displayNotif(msgInfo,zoneMsg,9);
+}
+
+int sendURL(char *Url) {
+String url = Url;
+int httpCode=0;
+int testurl= url.length();
+if (testurl>=6) {
+    http.begin(url);
+    httpCode = http.GET();
+    if (configSys.DEBUG) {
+          Serial.println("valeur de URL dans tobox : " + url);
+          Serial.println("valeur httpcode : " + httpCode);
+        }
+  }
+return httpCode;
+}
+
+
+void ToBox(char *Url,byte numero=0) {
+  int httpCode;
+  if (configSys.box)  {
+    httpCode=sendURL(Url);
+    String json="";
+    infoBOX=String(numero)+":"+String(httpCode);
+    json=createJson(configSys);
+    saveConfigSys(fileconfig,json);
+  }
+}
+
+
+//mqtt
+void MQTTsend() {
+  //update info temp
+      GetTemp();
+  String t;
+//  char topicS[80];
+  char buffer[512];
+  DynamicJsonDocument docMqtt(capacityConfig);
+ 
+  if (_dht) {
+  docMqtt["temperature"] = (String)temperature;
+  docMqtt["humidity"]= (String)humidity;
+  }
+  docMqtt["sec"] = configSys.SEC;
+  docMqtt["hor"] = configSys.HOR;
+  docMqtt["lum"] = configSys.LUM;
+  //docMqtt["rev"] = configSys.REV;
+  //docMqtt["cr"] = CR;
+  // Si led
+  if (hardConfig.typeLED >0 ) {
+    docMqtt["led"] =configSys.LED;
+    if (configSys.LED)  docMqtt["ledState"] ="on";
+      else docMqtt["ledState"] ="off";
+    if (hardConfig.typeLED == 1 || hardConfig.typeLED == 3) {
+    docMqtt["ledint"] =configSys.LEDINT;
+    // home assistant brillance sur 8 bits
+    int brightnessLed=configSys.LEDINT;
+   brightnessLed = map(brightnessLed,0,100,0,255);
+    docMqtt["brightnessLed"] =brightnessLed;
+    }
+  }
+  Serial.println("envoie publication MQTT");
+  //docMqtt["temperature"]=String(temperature);
+  size_t n = serializeJson(docMqtt, buffer);
+  t=topicName+String(TOPIC_STATE);
+  Serial.println(t);
+  //t.toCharArray(topicS,80);
+  MQTTclient.publish(t.c_str(), buffer,n);
+}
+
+void BoutonAction(byte btn , byte btnclic ) {
+int actionClick=0;
+int m=0;
+static byte clicstate=1;
+if (btn==10) actionClick=btnclic;
+else if (btnclic < 4 ) {
+      if (btn==1) actionClick=configSys.clic[btnclic-1];
+      else if (btn==2) actionClick=configSys.clic[btnclic+2];
+      else actionClick=0;
+    }
+else if (btnclic>100)  actionClick=btnclic;
+else actionClick=0;
+
+switch (actionClick) {
+
+    case 1: //  Affiche ou non les secondes
+          configSys.SEC=!configSys.SEC;
+          m=1;
+      break;
+      case 2: //ON / OFF horloge
+         configSys.HOR=!configSys.HOR;
+          m=1;
+      break;
+      case 3:
+      if (clicstate==1) {
+        cmdLum(false,0);
+        }
+        if (clicstate==2) {
+          cmdLum(false,15);
+        }
+        if (clicstate==3) {
+        cmdLum(true);
+        }
+          ++clicstate;
+          m=1;
+      break;
+      case 4 :cmdLED(!configSys.LED);
+      m=1;
+  break;
+      case 5 :  //affichage Historique
+      if (indexHist>0) displayHisto();
+      else {
+        //LuN=configSys.intensity;
+        displayNotif("Aucun historique");
+      }
+      break;
+      case 6 : // affichage / masque Minuteur
+              CR=!CR;
+              break;
+      case 7 : //Lancer Minuteur
+              minuteur = configSys.CrTime*60;
+              CR=true;
+      break;
+      case 8 : //URL Action 1
+                ToBox(configSys.URL_Action1,1);
+      break;
+      case 9 : //URL Action 1
+                ToBox(configSys.URL_Action2,2);
+      break;
+      case 10 : //URL Action 1
+                ToBox(configSys.URL_Action3,3);
+      break;
+    default:
+
+      break;
+  }
+  if (m==1) {
+      if (configSys.broker) MQTTsend();
+      sendBox=true;
+}
+//
+if (configSys.broker) {
+    char topicN[80];
+    char payload[10];
+    String t="";
+    String pl="";
+    t=topicName+"/btn"+String(btn);
+    pl=String(btnclic);
+    t.toCharArray(topicN,80);
+    pl.toCharArray(payload,10);
+    MQTTclient.publish(topicN, payload);
+ }
+}
+
 void displayTimer(char *psz,bool f) {
    int h,m,s;
       h  = minuteur / 60 / 60 % 24;
@@ -1940,43 +2099,6 @@ void displayDHT() {
     displayNotif(printDHT,zoneTime,10);
 }
 
-void ToBox(char *Url,byte numero=0) {
-  int httpCode;
-  if (configSys.box)  {
-    httpCode=sendURL(Url);
-    String json="";
-    infoBOX=String(numero)+":"+String(httpCode);
-    json=createJson(configSys);
-    saveConfigSys(fileconfig,json);
-  }
-}
-
-
-int sendURL(char *Url) {
-String url = Url;
-int httpCode=0;
-int testurl= url.length();
-if (testurl>=6) {
-    http.begin(url);
-    httpCode = http.GET();
-    if (configSys.DEBUG) {
-          Serial.println("valeur de URL dans tobox : " + url);
-          Serial.println("valeur httpcode : " + httpCode);
-        }
-  }
-return httpCode;
-}
-
-int readPhotocell() {
-  int sensorValue;
-  sensorValue = analogRead(0); // read analog input pin 0
-  // inversion valeur sombre=0 et tres lumineur=1023
-  //sensorValue = 1023 - sensorValue;
-  // apres inversion 1023 signifie led au max ( sombre )
-  if (configSys.DEBUG) Serial.println("valeur sensorvalue : "+String(sensorValue));
-  return sensorValue;
-}
-
 // detection presence photocell
 bool isPhotocell() {
   int valTestCell=0;
@@ -1990,41 +2112,8 @@ bool isPhotocell() {
 
 }
 
-// luminosite auto
-// fonction reglage auto luminosite
-uint8_t  lumAuto() {
-  uint8_t lum;
-  int sv;
-    if (_photocell) {
-    sv=readPhotocell();
-    if (configSys.DEBUG) Serial.println("valeur brut "+String(sv));
-    lum= map(sv, 0,1023 , 0, 15);
-    }
-  else lum=configSys.intensity;
-  if (configSys.DEBUG) Serial.println("valeur lum: "+String(lum));
-  return lum;
-}
 
-void cmdLum(bool val,byte I=configSys.intensity) {
-  String msgInfo="";
-  configSys.LUM=val;
-  if (val) {
-    lumAuto();
-    msgInfo="Auto";
-  } else {
-    configSys.intensity=I;
-    switch (I) {
-      case 0 : msgInfo="Min";
-      break;
-      case 15 : msgInfo="Max";
-      break;
-      default:msgInfo="L : "+String(I);
-      break;
-    }
-  }
- // LuN=configSys.intensity;
-  displayNotif(msgInfo,zoneMsg,9);
-}
+
 
 //websockets
 /*
@@ -2173,6 +2262,186 @@ void optionsSplit(bool *Opt,String Val,char split,int t=0) {
    }
 }
 
+void MQTTdevice(JsonDocument &doc) {
+    JsonObject device = doc.createNestedObject("dev");
+    device["ids"]=idNotif;
+    device["mf"]="byfeel";
+    device["mdl"]=hardware;
+    device["name"]="notif_"+String(hardConfig.nom);
+    device["sw"]=ver;
+ //   JsonArray cns = device.createNestedArray("cns");
+  //  cns.add("ip");
+  //  cns.add(WiFi.localIP().toString());
+
+}
+
+void MQTTconfig() {
+  char topicN[80];
+  String t="";
+  String tt="";
+  String nomHA="";
+  //preparation json to send
+  tt=String(configSys.prefixdiscovery)+"/sensor/"+idNotif;
+  nomHA="notif_"+String(hardConfig.nom);
+      char buffer[700];
+      DynamicJsonDocument docMqtt(capacityMQTT);
+      if (_dht) {
+         MQTTdevice(docMqtt);
+      // creation sensor
+      // Creation capteur temperature  topicName+String(TOPIC_STATE)
+      docMqtt["~"]=topicName;
+      docMqtt["stat_t"] ="~"+String(TOPIC_STATE);
+      // temperature
+      docMqtt["name"] =nomHA+"_T";
+      docMqtt["device_class"] ="temperature";
+      docMqtt["val_tpl"] ="{{ value_json.temperature}}";
+      docMqtt["unit_of_meas"] ="°C";
+      serializeJson(docMqtt, buffer);
+      t=tt+"_T"+"/config";
+      t.toCharArray(topicN,80);
+      MQTTclient.publish(topicN, buffer,true);
+//    Humidity
+      docMqtt["name"] =nomHA+"_H";
+      docMqtt["device_class"] ="humidity";
+      docMqtt["val_tpl"] ="{{ value_json.humidity}}";
+      docMqtt["unit_of_meas"] ="%";
+      serializeJson(docMqtt, buffer);
+      t=tt+"_H"+"/config";
+      t.toCharArray(topicN,80);
+      MQTTclient.publish(topicN, buffer,true);
+      }
+
+  //  Switch
+    docMqtt.clear();
+      tt=String(configSys.prefixdiscovery)+"/switch/"+idNotif;
+       MQTTdevice(docMqtt);
+  //switch mqtt secondes
+    docMqtt["~"]=topicName;
+    docMqtt["stat_t"] ="~"+String(TOPIC_STATE);
+    docMqtt["name"]=nomHA+"_sec";
+    docMqtt["cmd_t"]="~"+String(TOPIC_OPTIONS);
+    docMqtt["val_tpl"] ="{{ value_json.sec }}";
+    docMqtt["stat_on"] =true;
+    docMqtt["stat_off"] =false;
+    docMqtt["pl_on"] ="{'sec':'true'}";
+    docMqtt["pl_off"] ="{'sec':'false'}";
+    size_t n = serializeJson(docMqtt, buffer);
+    t=tt+"_sec"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+
+    //switch mqtt horloge
+    docMqtt["name"]=nomHA+"_hor";
+    docMqtt["val_tpl"] ="{{ value_json.hor }}";
+    docMqtt["pl_on"] ="{'hor':'true'}";
+    docMqtt["pl_off"] ="{'hor':'false'}";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_hor"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+
+if ( _photocell) {
+        //switch mqtt auto
+    docMqtt["name"]=nomHA+"_lum";
+    docMqtt["val_tpl"] ="{{ value_json.lum }}";
+    docMqtt["pl_on"] ="{'lum':'true'}";
+    docMqtt["pl_off"] ="{'lum':'false'}";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_lum"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+  }
+if (hardConfig.typeLED >0 ) {
+  docMqtt.clear();
+   tt=String(configSys.prefixdiscovery)+"/light/"+idNotif;
+    MQTTdevice(docMqtt);
+  docMqtt["~"]=topicName;
+  docMqtt["stat_t"] ="~"+String(TOPIC_STATE);
+  docMqtt["name"]=nomHA+"_led";
+  docMqtt["schema"] = "template";
+  docMqtt["cmd_t"]="~"+String(TOPIC_OPTIONS);
+  docMqtt["stat_tpl"] ="{{ value_json.ledState }}";
+  docMqtt["cmd_off_tpl"] ="{'led':'false'}";
+  if (hardConfig.typeLED == 1 || hardConfig.typeLED == 3 ) {
+  docMqtt["cmd_on_tpl"] ="{'led':'true'  {%- if brightness is defined -%},'ledint':'{{ brightness }}' {%- endif -%} }";
+  docMqtt["bri_tpl"] ="{{ value_json.brightnessLed }}";
+  }
+  else docMqtt["cmd_on_tpl"] ="{'led':'true'}";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_led"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+  }
+  if (hardConfig.btn1 ) {
+    // Si bouton 1
+    // '{"automation_type":"trigger","device":{"identifiers":["0AFFD234"],"name":"Bouton 1"}, "topic": "MQTT_button/button1", "payload":"PRESS", "type": "button_short_press", "subtype": "button_1"}'
+    docMqtt.clear();
+     MQTTdevice(docMqtt);
+    tt=String(configSys.prefixdiscovery)+"/device_automation/"+idNotif;
+    docMqtt["atype"]="trigger";
+    docMqtt["t"]=String(topicName+"/btn1");
+    docMqtt["stype"]="button_1";
+    // simple clic
+    docMqtt["type"]="button_short_press";
+    docMqtt["pl"]="1";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_btn1-1"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+        // Double clic
+    docMqtt["type"]="button_double_press";
+    docMqtt["pl"]="2";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_btn1-2"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+        // triple clic
+    docMqtt["type"]="button_triple_press";
+    docMqtt["pl"]="3";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_btn1-3"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+  }
+  if ( hardConfig.btn2 ) {
+    // si bouton 2
+        docMqtt.clear();
+     MQTTdevice(docMqtt);
+    tt=String(configSys.prefixdiscovery)+"/device_automation/"+idNotif;
+    docMqtt["atype"]="trigger";
+    docMqtt["t"]=String(topicName+"/btn2");
+    docMqtt["stype"]="button_2";
+    // simple clic
+    docMqtt["type"]="button_short_press";
+    docMqtt["pl"]="1";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_btn2-1"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+        // Double clic
+    docMqtt["type"]="button_double_press";
+    docMqtt["pl"]="2";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_btn2-2"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+        // Triple clic
+    docMqtt["type"]="button_triple_press";
+    docMqtt["pl"]="3";
+    n = serializeJson(docMqtt, buffer);
+    t=tt+"_btn2-3"+"/config";
+    t.toCharArray(topicN,80);
+    MQTTclient.publish(topicN, buffer,n);
+  }
+  startSend=false;
+}
+
+void testnet() {
+  netcode=sendURL("http://byfeel.info/testxl/");
+  if (netcode == 301 ) netOK=true;
+  else netOK=false;
+}
+
 String setConfig(String key,String value) {
   String rep="Aucune modification";
   bool memupcfg=false;
@@ -2314,6 +2583,14 @@ String setConfig(String key,String value) {
 
   if (memupcfg)  upCfg=10;
         return rep;
+}
+
+// reset parametre wifi , relance AP
+void wifiReset() {
+  WiFiManager wifiManager;
+  wifiManager.resetSettings();
+  //delay(1000);
+  //ESP.restart();
 }
 
 void handleConfig() {
@@ -2641,13 +2918,7 @@ ArduinoOTA.setHostname((const char *)hostname.c_str());
   ArduinoOTA.begin();
 }
 //******* FIN OTA ***************
-// reset parametre wifi , relance AP
-void wifiReset() {
-  WiFiManager wifiManager;
-  wifiManager.resetSettings();
-  //delay(1000);
-  //ESP.restart();
-}
+
 // callback fonction wifimanager
 void configModeCallback (WiFiManager *myWifiManager) {
   Serial.println("Entrez dans mode AP");
@@ -2737,95 +3008,6 @@ void Led_out() {
   } // fin switch
 }
 
-void BoutonAction(byte btn , byte btnclic ) {
-int actionClick=0;
-int m=0;
-static byte clicstate=1;
-if (btn==10) actionClick=btnclic;
-else if (btnclic < 4 ) {
-      if (btn==1) actionClick=configSys.clic[btnclic-1];
-      else if (btn==2) actionClick=configSys.clic[btnclic+2];
-      else actionClick=0;
-    }
-else if (btnclic>100)  actionClick=btnclic;
-else actionClick=0;
-
-switch (actionClick) {
-
-    case 1: //  Affiche ou non les secondes
-          configSys.SEC=!configSys.SEC;
-          m=1;
-      break;
-      case 2: //ON / OFF horloge
-         configSys.HOR=!configSys.HOR;
-          m=1;
-      break;
-      case 3:
-      if (clicstate==1) {
-        cmdLum(false,0);
-        }
-        if (clicstate==2) {
-          cmdLum(false,15);
-        }
-        if (clicstate==3) {
-        cmdLum(true);
-        }
-          ++clicstate;
-          m=1;
-      break;
-      case 4 :cmdLED(!configSys.LED);
-      m=1;
-  break;
-      case 5 :  //affichage Historique
-      if (indexHist>0) displayHisto();
-      else {
-        //LuN=configSys.intensity;
-        displayNotif("Aucun historique");
-      }
-      break;
-      case 6 : // affichage / masque Minuteur
-              CR=!CR;
-              break;
-      case 7 : //Lancer Minuteur
-              minuteur = configSys.CrTime*60;
-              CR=true;
-      break;
-      case 8 : //URL Action 1
-                ToBox(configSys.URL_Action1,1);
-      break;
-      case 9 : //URL Action 1
-                ToBox(configSys.URL_Action2,2);
-      break;
-      case 10 : //URL Action 1
-                ToBox(configSys.URL_Action3,3);
-      break;
-    default:
-
-      break;
-  }
-  if (m==1) {
-      if (configSys.broker) MQTTsend();
-      sendBox=true;
-}
-//
-if (configSys.broker) {
-    char topicN[80];
-    char payload[10];
-    String t="";
-    String pl="";
-    t=topicName+"/btn"+String(btn);
-    pl=String(btnclic);
-    t.toCharArray(topicN,80);
-    pl.toCharArray(payload,10);
-    MQTTclient.publish(topicN, payload);
- }
-}
-
-void testnet() {
-  netcode=sendURL("http://byfeel.info/testxl/");
-  if (netcode == 301 ) netOK=true;
-  else netOK=false;
-}
 
 void infoSetup(int step,String txt="") {
 P.print(txt);
@@ -2856,46 +3038,6 @@ void alarme() {
         displayNotif(configSys.msgAlarme,zoneTime);
         if (configSys.box) BoutonAction(10 , configSys.action[1] );
       }
-}
-
-//mqtt
-void MQTTsend() {
-  //update info temp
-      GetTemp();
-  String t;
-//  char topicS[80];
-  char buffer[512];
-  DynamicJsonDocument docMqtt(capacityConfig);
- 
-  if (_dht) {
-  docMqtt["temperature"] = (String)temperature;
-  docMqtt["humidity"]= (String)humidity;
-  }
-  docMqtt["sec"] = configSys.SEC;
-  docMqtt["hor"] = configSys.HOR;
-  docMqtt["lum"] = configSys.LUM;
-  //docMqtt["rev"] = configSys.REV;
-  //docMqtt["cr"] = CR;
-  // Si led
-  if (hardConfig.typeLED >0 ) {
-    docMqtt["led"] =configSys.LED;
-    if (configSys.LED)  docMqtt["ledState"] ="on";
-      else docMqtt["ledState"] ="off";
-    if (hardConfig.typeLED == 1 || hardConfig.typeLED == 3) {
-    docMqtt["ledint"] =configSys.LEDINT;
-    // home assistant brillance sur 8 bits
-    int brightnessLed=configSys.LEDINT;
-   brightnessLed = map(brightnessLed,0,100,0,255);
-    docMqtt["brightnessLed"] =brightnessLed;
-    }
-  }
-  Serial.println("envoie publication MQTT");
-  //docMqtt["temperature"]=String(temperature);
-  size_t n = serializeJson(docMqtt, buffer);
-  t=topicName+String(TOPIC_STATE);
-  Serial.println(t);
-  //t.toCharArray(topicS,80);
-  MQTTclient.publish(t.c_str(), buffer,n);
 }
 
 
@@ -2975,7 +3117,7 @@ else if (t.indexOf(TOPIC_CONFIG)>10) {
   payload[length] = '\0';
   String s = String((char*)payload);
   Serial.println("test s : "+s);
-  /*for (int i = 0; i < length; i++) {
+  for (int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }*/
 }
@@ -2988,180 +3130,6 @@ void MQTTsouscription(String t) {
   if (MQTTclient.subscribe(topicN,0)) {
       if (configSys.DEBUG) Serial.println("souscription ok");
   } else   if (configSys.DEBUG) Serial.println("Erreur souscription");
-}
-
-void MQTTdevice(JsonDocument &doc) {
-    JsonObject device = doc.createNestedObject("dev");
-    device["ids"]=idNotif;
-    device["mf"]="byfeel";
-    device["mdl"]=hardware;
-    device["name"]="notif_"+String(hardConfig.nom);
-    device["sw"]=ver;
- //   JsonArray cns = device.createNestedArray("cns");
-  //  cns.add("ip");
-  //  cns.add(WiFi.localIP().toString());
-
-}
-
-void MQTTconfig() {
-  char topicN[80];
-  String t="";
-  String tt="";
-  String nomHA="";
-  //preparation json to send
-  tt=String(configSys.prefixdiscovery)+"/sensor/"+idNotif;
-  nomHA="notif_"+String(hardConfig.nom);
-      char buffer[700];
-      DynamicJsonDocument docMqtt(capacityMQTT);
-      if (_dht) {
-         MQTTdevice(docMqtt);
-      // creation sensor
-      // Creation capteur temperature  topicName+String(TOPIC_STATE)
-      docMqtt["~"]=topicName;
-      docMqtt["stat_t"] ="~"+String(TOPIC_STATE);
-      // temperature
-      docMqtt["name"] =nomHA+"_T";
-      docMqtt["device_class"] ="temperature";
-      docMqtt["val_tpl"] ="{{ value_json.temperature}}";
-      docMqtt["unit_of_meas"] ="°C";
-      serializeJson(docMqtt, buffer);
-      t=tt+"_T"+"/config";
-      t.toCharArray(topicN,80);
-      MQTTclient.publish(topicN, buffer,true);
-//    Humidity
-      docMqtt["name"] =nomHA+"_H";
-      docMqtt["device_class"] ="humidity";
-      docMqtt["val_tpl"] ="{{ value_json.humidity}}";
-      docMqtt["unit_of_meas"] ="%";
-      serializeJson(docMqtt, buffer);
-      t=tt+"_H"+"/config";
-      t.toCharArray(topicN,80);
-      MQTTclient.publish(topicN, buffer,true);
-      }
-
-  //  Switch
-    docMqtt.clear();
-      tt=String(configSys.prefixdiscovery)+"/switch/"+idNotif;
-       MQTTdevice(docMqtt);
-  //switch mqtt secondes
-    docMqtt["~"]=topicName;
-    docMqtt["stat_t"] ="~"+String(TOPIC_STATE);
-    docMqtt["name"]=nomHA+"_sec";
-    docMqtt["cmd_t"]="~"+String(TOPIC_OPTIONS);
-    docMqtt["val_tpl"] ="{{ value_json.sec }}";
-    docMqtt["stat_on"] =true;
-    docMqtt["stat_off"] =false;
-    docMqtt["pl_on"] ="{'sec':'true'}";
-    docMqtt["pl_off"] ="{'sec':'false'}";
-    size_t n = serializeJson(docMqtt, buffer);
-    t=tt+"_sec"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-
-    //switch mqtt horloge
-    docMqtt["name"]=nomHA+"_hor";
-    docMqtt["val_tpl"] ="{{ value_json.hor }}";
-    docMqtt["pl_on"] ="{'hor':'true'}";
-    docMqtt["pl_off"] ="{'hor':'false'}";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_hor"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-
-if ( _photocell) {
-        //switch mqtt auto
-    docMqtt["name"]=nomHA+"_lum";
-    docMqtt["val_tpl"] ="{{ value_json.lum }}";
-    docMqtt["pl_on"] ="{'lum':'true'}";
-    docMqtt["pl_off"] ="{'lum':'false'}";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_lum"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-  }
-if (hardConfig.typeLED >0 ) {
-  docMqtt.clear();
-   tt=String(configSys.prefixdiscovery)+"/light/"+idNotif;
-    MQTTdevice(docMqtt);
-  docMqtt["~"]=topicName;
-  docMqtt["stat_t"] ="~"+String(TOPIC_STATE);
-  docMqtt["name"]=nomHA+"_led";
-  docMqtt["schema"] = "template";
-  docMqtt["cmd_t"]="~"+String(TOPIC_OPTIONS);
-  docMqtt["stat_tpl"] ="{{ value_json.ledState }}";
-  docMqtt["cmd_off_tpl"] ="{'led':'false'}";
-  if (hardConfig.typeLED == 1 || hardConfig.typeLED == 3 ) {
-  docMqtt["cmd_on_tpl"] ="{'led':'true'  {%- if brightness is defined -%},'ledint':'{{ brightness }}' {%- endif -%} }";
-  docMqtt["bri_tpl"] ="{{ value_json.brightnessLed }}";
-  }
-  else docMqtt["cmd_on_tpl"] ="{'led':'true'}";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_led"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-  }
-  if (hardConfig.btn1 ) {
-    // Si bouton 1
-    // '{"automation_type":"trigger","device":{"identifiers":["0AFFD234"],"name":"Bouton 1"}, "topic": "MQTT_button/button1", "payload":"PRESS", "type": "button_short_press", "subtype": "button_1"}'
-    docMqtt.clear();
-     MQTTdevice(docMqtt);
-    tt=String(configSys.prefixdiscovery)+"/device_automation/"+idNotif;
-    docMqtt["atype"]="trigger";
-    docMqtt["t"]=String(topicName+"/btn1");
-    docMqtt["stype"]="button_1";
-    // simple clic
-    docMqtt["type"]="button_short_press";
-    docMqtt["pl"]="1";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_btn1-1"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-        // Double clic
-    docMqtt["type"]="button_double_press";
-    docMqtt["pl"]="2";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_btn1-2"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-        // triple clic
-    docMqtt["type"]="button_triple_press";
-    docMqtt["pl"]="3";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_btn1-3"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-  }
-  if ( hardConfig.btn2 ) {
-    // si bouton 2
-        docMqtt.clear();
-     MQTTdevice(docMqtt);
-    tt=String(configSys.prefixdiscovery)+"/device_automation/"+idNotif;
-    docMqtt["atype"]="trigger";
-    docMqtt["t"]=String(topicName+"/btn2");
-    docMqtt["stype"]="button_2";
-    // simple clic
-    docMqtt["type"]="button_short_press";
-    docMqtt["pl"]="1";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_btn2-1"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-        // Double clic
-    docMqtt["type"]="button_double_press";
-    docMqtt["pl"]="2";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_btn2-2"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-        // Triple clic
-    docMqtt["type"]="button_triple_press";
-    docMqtt["pl"]="3";
-    n = serializeJson(docMqtt, buffer);
-    t=tt+"_btn2-3"+"/config";
-    t.toCharArray(topicN,80);
-    MQTTclient.publish(topicN, buffer,n);
-  }
-  startSend=false;
 }
 
 boolean MQTTconnect() {
@@ -3199,6 +3167,52 @@ boolean MQTTconnect() {
     }
   return MQTTclient.connected();
 }
+
+// Affichage des pages WEB
+//********************* Page web
+String getContentType(String filename){
+  if (server.hasArg("download")) return "application/octet-stream";
+  else if(filename.endsWith(".html")) return "text/html";
+  else if (filename.endsWith(".htm")) return "text/html";
+  else if(filename.endsWith(".css")) return "text/css";
+  else if(filename.endsWith(".js")) return "application/javascript";
+  else if(filename.endsWith(".ico")) return "image/x-icon";
+  else if(filename.endsWith(".gz")) return "application/x-gzip";
+  else if (filename.endsWith(".xml")) return "text/xml";
+  else if (filename.endsWith(".png")) return "image/png";
+  return "text/plain";
+}
+
+bool handleFileRead(String path){  // send the right file to the client (if it exists)
+  Serial.println("handleFileRead: " + path);
+  if(path.endsWith("/")) path += _pagehtml;           // If a folder is requested, send the index file
+  String contentType = getContentType(path);             // Get the MIME type
+  String pathWithGz = path + ".gz";
+  if(LittleFS.exists(pathWithGz) || LittleFS.exists(path)){  // If the file exists, either as a compressed archive, or normal
+    if(LittleFS.exists(pathWithGz))                          // If there's a compressed version available
+      path += ".gz";                                         // Use the compressed version
+    File file = LittleFS.open(path, "r");                    // Open the file
+    //size_t sent =
+    server.streamFile(file, contentType);    // Send it to the client
+    file.close();                                          // Close the file again
+    Serial.println(String("\tSent file: ") + path);
+    return true;
+  }
+  Serial.println(String("\tFile Not Found: ") + path);
+  return false;                                          // If the file doesn't exist, return false
+}
+
+String getPage() {
+  String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='10'/>";
+  page += "<title>upload</title><meta charset='utf-8'>";
+  page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }</style>";
+  page += "</head><body><h3>Le fichier à bien été enregistré</h3>";
+  page += "<p>Le notif'heure va rebooter d'ici une trentaine de secondes - Merci d'atendre le reboot pour la prise en compte </p>";
+  page += "<p>Vous pouvez cliquer sur ce lien , pour retourner sur l' <a href='/'>Accueil</a> .</p>";
+  page += "</body></html>";
+  return page;
+}
+
 
 // ****************************
  /******************************
@@ -3578,9 +3592,6 @@ void finNotif() {
   cmdLED(configSys.LED);
 }
 
-
-
-
 void loop() {
   static bool XLZoneTest=true;
   static bool disClock=false;
@@ -3880,49 +3891,4 @@ void handleFileUpload() {
     }
     if (configSys.DEBUG)  Serial.print("handleFileUpload Size: "); Serial.println(upload.totalSize);
   }
-}
-
-// Affichage des pages WEB
-//********************* Page web
-String getContentType(String filename){
-  if (server.hasArg("download")) return "application/octet-stream";
-  else if(filename.endsWith(".html")) return "text/html";
-  else if (filename.endsWith(".htm")) return "text/html";
-  else if(filename.endsWith(".css")) return "text/css";
-  else if(filename.endsWith(".js")) return "application/javascript";
-  else if(filename.endsWith(".ico")) return "image/x-icon";
-  else if(filename.endsWith(".gz")) return "application/x-gzip";
-  else if (filename.endsWith(".xml")) return "text/xml";
-  else if (filename.endsWith(".png")) return "image/png";
-  return "text/plain";
-}
-
-bool handleFileRead(String path){  // send the right file to the client (if it exists)
-  Serial.println("handleFileRead: " + path);
-  if(path.endsWith("/")) path += _pagehtml;           // If a folder is requested, send the index file
-  String contentType = getContentType(path);             // Get the MIME type
-  String pathWithGz = path + ".gz";
-  if(LittleFS.exists(pathWithGz) || LittleFS.exists(path)){  // If the file exists, either as a compressed archive, or normal
-    if(LittleFS.exists(pathWithGz))                          // If there's a compressed version available
-      path += ".gz";                                         // Use the compressed version
-    File file = LittleFS.open(path, "r");                    // Open the file
-    //size_t sent =
-    server.streamFile(file, contentType);    // Send it to the client
-    file.close();                                          // Close the file again
-    Serial.println(String("\tSent file: ") + path);
-    return true;
-  }
-  Serial.println(String("\tFile Not Found: ") + path);
-  return false;                                          // If the file doesn't exist, return false
-}
-
-String getPage() {
-  String page = "<html lang=fr-FR><head><meta http-equiv='refresh' content='10'/>";
-  page += "<title>upload</title><meta charset='utf-8'>";
-  page += "<style> body { background-color: #fffff; font-family: Arial, Helvetica, Sans-Serif; Color: #000088; }</style>";
-  page += "</head><body><h3>Le fichier à bien été enregistré</h3>";
-  page += "<p>Le notif'heure va rebooter d'ici une trentaine de secondes - Merci d'atendre le reboot pour la prise en compte </p>";
-  page += "<p>Vous pouvez cliquer sur ce lien , pour retourner sur l' <a href='/'>Accueil</a> .</p>";
-  page += "</body></html>";
-  return page;
 }
