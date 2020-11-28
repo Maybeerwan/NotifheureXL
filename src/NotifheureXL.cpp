@@ -299,8 +299,6 @@ struct sConfigSys {
   bool REV;
   bool DHT;                   // True si affichage DHT demandé sur notif
   byte tempDDHT;              // Tempo Display DHT
-  byte timeREV[2];            // Heure reveil [5réveilx2 (H:m)]
-  char msgAlarme[80];         // Message a affiché pour alarme
   char msgMinuteur[80];       // Message a affiché pour fin de minuteur
   bool LED;                   // etat LED
   int LEDINT;                 // Intensité par defaut de la veilleuse
@@ -313,12 +311,12 @@ struct sConfigSys {
   char URL_Action2[130];
   char URL_Action3[130];
   char URL_Update[130];
-  bool alDay[7];              // jour alarme
   int fxint;                  // intensité par defaut fx visuel
   byte fxcolor;               //colueur par defaut fx
   char hflag[10];              // flag autorisé pour historique
   int CrTime;
   byte fxCR;                  // fx minuteur par defaut
+  // TODO EPN
   byte fxAL;                  // fx Alarme par defaut
   byte fxSoundCR;             // fx Sound Minuteur par defaut
   byte fxSoundAL;             // fx Sound Alarme par defaut
@@ -344,6 +342,7 @@ const size_t capacityConfig = 4*JSON_ARRAY_SIZE(2) + JSON_ARRAY_SIZE(6) + 2*JSON
 const size_t capacityHisto =3*JSON_ARRAY_SIZE(10)  + JSON_OBJECT_SIZE(4) + 500;
 const char *fileconfig = "/config/config.json";  // fichier config
 const char *fileHist = "/config/Historique.json";  // fichier config
+const char *fileAlarmes = "/config/Alarmes.json"; // Fichier des alarmes
 
 // init network (wifi , broker )
 WiFiUDP ntpUDP;
@@ -824,9 +823,11 @@ sprite[] =
 };
 
 // Gestion des alarmes //
-#define NB_ALARMES 1
-const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES*JSON_ARRAY_SIZE(8) + NB_ALARMES*JSON_OBJECT_SIZE(10) + 1;
-struct sAlame {				
+#define NB_ALARMES 3
+const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES* (JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12)) + 1;
+
+struct sAlarme {				
+  char nom[50];   // nom de l'alarme
   bool actif;				// Actif
   byte heure;				// Heure
   byte minute;
@@ -840,7 +841,7 @@ struct sAlame {
   bool led;
 };
 
-sAlame Alarmes[5];  // Nombre d'alarmes
+sAlarme Alarmes[5];  // Nombre d'alarmes
 
  //void setType() {MD_MAX72XX::setModuleType(HARDWARE_TYPE);}
 /*************************
@@ -1022,7 +1023,7 @@ bool checkFlag(char F) {
 //******************************************************************************************************************//
 
 // Chargement des alarmes
-void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
+void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
 
   // Open file 
 	File file = LittleFS.open(fileAlarmes, "r");
@@ -1049,6 +1050,7 @@ void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
 	JsonObject objAlarmes = jsonAlarmes[i];
 	
 	// parametre
+  strlcpy(alarmes[i].nom,objAlarmes["nom"], sizeof(alarmes[i].nom));
 	alarmes[i].actif = objAlarmes["actif"] | false;		
 	alarmes[i].heure = objAlarmes["heure"] | 0;
 	alarmes[i].minute = objAlarmes["minute"] | 0;
@@ -1063,18 +1065,18 @@ void loadAlarmes(const char *fileAlarmes, sAlame *alarmes ) {
     // alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
 	
 	strlcpy(alarmes[i].msgAlarme,objAlarmes["msgAlarme"], sizeof(alarmes[i].msgAlarme));
-	alarmes[i].fxAL = objAlarmes["fxAL"] ;         
-	alarmes[i].fxSoundAL = objAlarmes["fxSoundAL"];    
-	alarmes[i].action = objAlarmes["action"];     
-	alarmes[i].volumeAudio = objAlarmes["volumeAudio"] ;	
-	alarmes[i].pisteMP3 = objAlarmes["pisteMP3"] ;
+	alarmes[i].fxAL = objAlarmes["fxAL"] |0;         
+	alarmes[i].fxSoundAL = objAlarmes["fxSoundAL"] |0;    
+	alarmes[i].action = objAlarmes["action"] |0;     
+	alarmes[i].volumeAudio = objAlarmes["volumeAudio"] |0;	
+	alarmes[i].pisteMP3 = objAlarmes["pisteMP3"] |0;
 	alarmes[i].led = objAlarmes["led"] | false;
 	}
 
 	file.close();
 }
 
-String createAlarmeJson(sAlame  *alarmes,bool flagCreate=false) {
+String createAlarmeJson(sAlarme  *alarmes) {
   String json;
   DynamicJsonDocument doc(capacityAlarmes);
   
@@ -1084,36 +1086,52 @@ String createAlarmeJson(sAlame  *alarmes,bool flagCreate=false) {
 
   for (int i=0;i<NB_ALARMES;i++) {
   
-	JsonObject objAlarmes = docAlarmes.createNestedObject();
+    JsonObject objAlarmes = docAlarmes.createNestedObject();
 
-	// parametre
-	objAlarmes["actif"] = alarmes[i].actif;		
-	objAlarmes["heure"] = alarmes[i].heure;
-	objAlarmes["minute"] = alarmes[i].minute;
-	// alarme jours
-	JsonArray aday = objAlarmes.createNestedArray("ALDAY");
-    aday.add(alarmes[i].alDay[0]);
-    aday.add(alarmes[i].alDay[1]);
-    aday.add(alarmes[i].alDay[2]);
-    aday.add(alarmes[i].alDay[3]);
-    aday.add(alarmes[i].alDay[4]);
-    aday.add(alarmes[i].alDay[5]);
-    aday.add(alarmes[i].alDay[6]);
-    // aday.add(alarmes[i].alDay[7]);   
-	
-	objAlarmes["msgAlarme"] = alarmes[i].msgAlarme;
-	objAlarmes["fxAL"] = alarmes[i].fxAL;         
-	objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
-	objAlarmes["action"] = alarmes[i].action;     
-	objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
-	objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
-	objAlarmes["led"] = alarmes[i].led;
+    // parametre
+    objAlarmes["nom"] = alarmes[i].nom;
+    objAlarmes["actif"] = alarmes[i].actif;		
+    objAlarmes["heure"] = alarmes[i].heure;
+    objAlarmes["minute"] = alarmes[i].minute;
+    // alarme jours
+    JsonArray aday = objAlarmes.createNestedArray("ALDAY");
+      aday.add(alarmes[i].alDay[0]);
+      aday.add(alarmes[i].alDay[1]);
+      aday.add(alarmes[i].alDay[2]);
+      aday.add(alarmes[i].alDay[3]);
+      aday.add(alarmes[i].alDay[4]);
+      aday.add(alarmes[i].alDay[5]);
+      aday.add(alarmes[i].alDay[6]);
+      // aday.add(alarmes[i].alDay[7]);   
+    
+    objAlarmes["msgAlarme"] = alarmes[i].msgAlarme;
+    objAlarmes["fxAL"] = alarmes[i].fxAL;         
+    objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
+    objAlarmes["action"] = alarmes[i].action;     
+    objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
+    objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
+    objAlarmes["led"] = alarmes[i].led;
 
 }
   // envoie alarmes json
   serializeJsonPretty(docAlarmes,json);
   return json;
 }
+
+
+void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
+{
+  for(int i=0; i<NB_ALARMES; i++)
+  {
+    if(Alarmes[i].alDay[day])
+    {
+      if(hour == Alarmes[i].heure && minute==Alarmes[i].minute)
+        Serial.println("Lancement de l'alarme " + i);
+        alarme(Alarmes[i]);
+    }
+  }
+}
+
 //******************************************************************************************************************//
 
 //// Mesure DHT
@@ -1181,7 +1199,6 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
   // Initialisation des variables systémes pour configuration , si non présente valeur par defaut affecté
   strlcpy(config.NTPSERVER,docConfig["NTPSERVER"] | "pool.ntp.org",sizeof(config.NTPSERVER));
   strlcpy(config.hostName,docConfig["SUFFIXEHOST"] | "notifXL",sizeof(config.hostName));
-  strlcpy(config.msgAlarme,docConfig["MSGALARM"] | TXTALARM,sizeof(config.msgAlarme));
   strlcpy(config.msgMinuteur,docConfig["MSGMINUT"] | TXTMINUT,sizeof(config.msgMinuteur));
   strlcpy(config.hflag,docConfig["HFLAG"] | HF,sizeof(config.hflag));
   //config.timeZone = docConfig["TIMEZONE"] | UTC;
@@ -1206,17 +1223,7 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
   config.offsetT=docConfig["OFT"] | 0;
   config.offsetH=docConfig["OFH"] | 0;
   config.tempDDHT=docConfig["TEMPDDHT"] | TEMPODDHT;
-  config.timeREV[0]=docConfig["TIMEREV"][0] | 0;
-  config.timeREV[1]=docConfig["TIMEREV"][1] | 0;
-
-  config.alDay[0]=docConfig["ALDAY"][0] | false;
-  config.alDay[1]=docConfig["ALDAY"][1] | false;
-  config.alDay[2]=docConfig["ALDAY"][2] | true;
-  config.alDay[3]=docConfig["ALDAY"][3] | true;
-  config.alDay[4]=docConfig["ALDAY"][4] | true;
-  config.alDay[5]=docConfig["ALDAY"][5] | true;
-  config.alDay[6]=docConfig["ALDAY"][6] | true;
-  // config.alDay[7]=docConfig["ALDAY"][7] | false;
+  
   config.charOff=docConfig["CHAROFF"] | ' ';
   config.timeAdjust=docConfig["TIMEADJUST"] | OFFSET_ADJUST;
   strlcpy(config.textnotif,docConfig["TEXTNOTIF"] | "Notif",sizeof(config.textnotif));
@@ -1272,12 +1279,9 @@ String createJson(sConfigSys  &config,bool flagCreate=false) {
   docConfig["REV"]=config.REV;
   docConfig["DDHT"]=config.DHT;
   docConfig["TEMPDDHT"]=config.tempDDHT;
-  docConfig["MSGALARM"]=config.msgAlarme;
   docConfig["MSGMINUT"]=config.msgMinuteur;
   docConfig["HFLAG"]=config.hflag;
-  JsonArray doctime = docConfig.createNestedArray("TIMEREV");
-  doctime.add(config.timeREV[0]);
-  doctime.add(config.timeREV[1]);
+
   docConfig["NTPSERVER"]=config.NTPSERVER;
   docConfig["SUFFIXEHOST"]=config.hostName;
   docConfig["TZOFFSET"]=hardConfig.Offset;
@@ -1391,16 +1395,7 @@ String createJson(sConfigSys  &config,bool flagCreate=false) {
   JsonArray action = docConfig.createNestedArray("ACTION");
   action.add(config.action[0]);
   action.add(config.action[1]);
-  // alarme jours
-  JsonArray aday = docConfig.createNestedArray("ALDAY");
-    aday.add(config.alDay[0]);
-    aday.add(config.alDay[1]);
-    aday.add(config.alDay[2]);
-    aday.add(config.alDay[3]);
-    aday.add(config.alDay[4]);
-    aday.add(config.alDay[5]);
-    aday.add(config.alDay[6]);
-    aday.add(config.alDay[7]);
+
   //donnee hardConfig
   docConfig["NETCODE"]=netcode;
   docConfig["NETOK"]=netOK;
@@ -2562,11 +2557,6 @@ String setConfig(String key,String value) {
                                             val.toCharArray(configSys.msgMinuteur,sizeof(configSys.msgMinuteur));
                                             upCfg=1;
                                             }
-        if (key=="altext")   if (validString(value,1,80)) {
-                                            val=value;
-                                            val.toCharArray(configSys.msgAlarme,sizeof(configSys.msgAlarme));
-                                            upCfg=1;
-                                            }
         if (key=="horon") { optionsSplit(configSys.horon,value+":",':');upCfg=1;}
         if (key=="horoff") { optionsSplit(configSys.horoff,value+":",':');upCfg=1;}
         if (key=="hoo") if (optionsBool(&configSys.hoo,value)) upCfg=1;
@@ -2693,12 +2683,6 @@ String SetOptions(String key,String value) {
         cmdLum(configSys.LUM);
         rep="LUM : "+String(configSys.LUM)+" et INT: "+String(configSys.intensity);
       }
-      if (key=="TIMEREV") {
-        optionsSplit(configSys.timeREV,value+":",':');
-        upOpt=1;
-        configSys.REV=true;
-        rep="TIMEREV :"+String(configSys.timeREV[0])+"-"+String(configSys.timeREV[1]);
-      }
     if (key=="INT") {
       optionsNum(&configSys.intensity,value,0,15);
       cmdLum(false,configSys.intensity);
@@ -2716,7 +2700,6 @@ String SetOptions(String key,String value) {
     }
     if (key=="CR") if (optionsBool(&CR,value)) {rep="CR:"+String(CR);upOpt=2;}
     if (key=="CRSTP") if (optionsBool(&CRStop,value)) {rep="CRSTOP:"+String(CRStop);}
-    if (key=="ALD") {optionsSplit(configSys.alDay,value,',');rep="ALD:"+value;upOpt=1;}
     return rep;
 }
 void updateOptions() {
@@ -2731,6 +2714,52 @@ void updateOptions() {
     }
   upOpt=0;
 }
+
+void handleAlarme() {
+  
+  DynamicJsonDocument docAlarme(capacityAlarmes); // TODO eventuellement réduire la capacite
+  docAlarme["ID"] = -1; // identifiant par défaut
+  String key,value, rep;
+  // lecture des tout les arguments
+  for (int i = 0; i < server.args(); i++) {
+    key=server.argName(i);
+    key.toUpperCase();
+    value=server.arg(i);
+    docAlarme[key]=value;
+  }
+  // si argument avec identifiant alors on mets à jour
+  if(docAlarme["ID"] > -1) {
+    int i = docAlarme["ID"];
+    // parametre
+    strlcpy(Alarmes[i].nom,docAlarme["nom"], sizeof(Alarmes[i].nom));
+    Alarmes[i].actif = docAlarme["actif"] | false;		
+    Alarmes[i].heure = docAlarme["heure"] | 0;
+    Alarmes[i].minute = docAlarme["minute"] | 0;
+    // alarme jours
+    Alarmes[i].alDay[0] = docAlarme["ALDAY0"] | false;
+    Alarmes[i].alDay[1] = docAlarme["ALDAY1"] | false;
+    Alarmes[i].alDay[2] = docAlarme["ALDAY2"] | false;
+    Alarmes[i].alDay[3] = docAlarme["ALDAY3"] | false;
+    Alarmes[i].alDay[4] = docAlarme["ALDAY4"] | false;
+    Alarmes[i].alDay[5] = docAlarme["ALDAY5"] | false;
+    Alarmes[i].alDay[6] = docAlarme["ALDAY6"] | false; 
+
+    strlcpy(Alarmes[i].msgAlarme,docAlarme["msgAlarme"], sizeof(Alarmes[i].msgAlarme));
+    Alarmes[i].fxAL = docAlarme["fxAL"] | 0;         
+    Alarmes[i].fxSoundAL = docAlarme["fxSoundAL"] | 0;    
+    Alarmes[i].action = docAlarme["action"] | 0;     
+    Alarmes[i].volumeAudio = docAlarme["volumeAudio"] | 0;	
+    Alarmes[i].pisteMP3 = docAlarme["pisteMP3"] | 0;
+    Alarmes[i].led = docAlarme["led"] | false;
+	}
+
+    String json=createAlarmeJson(Alarmes);
+    saveConfigSys(fileAlarmes,json);
+
+  server.send(200,"text/plane",createAlarmeJson(Alarmes));
+
+}
+
 
 void handleOptions() {
   String key,value,rep;
@@ -3023,21 +3052,14 @@ else notifLed.fx=0;
 if (notifLed.fx>0) fxLED(Blue);
 }
 
-void alarme() {
-  // detection jour weelday()
-  bool okDay=false;
-  for (int i=1;i<8;i++) {
-    if (configSys.alDay[i]==true && weekday()==i )  okDay=true;
-  }
-  // Si jour ok
-  if (okDay==true) {
-        Serial.println("Mode alarme");
-        //LuN=configSys.intensity;
-        notifLed=FX_led[configSys.fxAL];
-        notifAudio.fx=configSys.fxSoundAL;
-        displayNotif(configSys.msgAlarme,zoneTime);
-        if (configSys.box) BoutonAction(10 , configSys.action[1] );
-      }
+void alarme(sAlarme &alarme) {
+  Serial.println("Mode alarme");
+  //LuN=configSys.intensity;
+  notifLed=FX_led[alarme.fxAL];
+  notifAudio.fx=alarme.fxSoundAL;
+  displayNotif(alarme.msgAlarme,zoneTime);
+  if (configSys.box) BoutonAction(10 , configSys.action[1] );
+
 }
 
 
@@ -3298,6 +3320,7 @@ if (configSys.broker) {
  server.on("/Config",handleConfig); //page gestion Options
  server.on("/Options",handleOptions); //page gestion Options
  server.on("/getInfo",handleGetInfo); //page gestion Options
+ server.on("/configAlarme",handleAlarme); // configAlarme
  // Gestion securisé page config
  server.on("/setup.html", []() {
       if (!server.authenticate(www_username, www_password)) {
@@ -3429,7 +3452,9 @@ if (ntpOK) {
 if (configSys.DEBUG) Serial.println("time ok :"+String(now())+" offset :"+String(hardConfig.Offset)+" minutes");
 }
 // historique
+loadAlarmes(fileAlarmes,Alarmes);
 loadHisto(fileHist,histNotif );
+
 
 //***************** Etape 1  *******
 //  Configuration Matrices
@@ -3821,11 +3846,7 @@ if (configSys.broker) {
 
     // Alarme
     if (configSys.REV) {
-      if (hour()==configSys.timeREV[0]) {
-        if (minute()==configSys.timeREV[1]) {
-          if (second() <5 && second() >0 ) {  alarme(); }
-        }
-      }
+      verifierAlarme(weekday()-1, hour(), minute(), second());
     }
 
     // AutoOn - display horloge
