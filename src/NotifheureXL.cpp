@@ -1119,317 +1119,6 @@ String createAlarmeJson(sAlarme  *alarmes) {
 }
 
 
-void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
-{
-  for(int i=0; i<NB_ALARMES; i++)
-  {
-    if(Alarmes[i].alDay[day])
-    {
-      if(hour == Alarmes[i].heure && minute==Alarmes[i].minute)
-        Serial.println("Lancement de l'alarme " + i);
-        alarme(Alarmes[i]);
-    }
-  }
-}
-
-//******************************************************************************************************************//
-
-//// Mesure DHT
-void GetTemp() {
-  int ModelDHT = 0 ;
-    temperature = dht.getTemperature() + configSys.offsetT;
-    humidity= dht.getHumidity() + configSys.offsetH;
-
-  if (isnan(humidity) || isnan(temperature)) {
-    _dht=false;
-    temperature = 0;
-    humidity= 0;
-    heatIndex = 0;
-    dewPoint = 0;
-    per = 0;
-  }
-  else {
-    _dht=true;
-    ModelDHT=dht.getModel();
-    heatIndex = dht.computeHeatIndex(temperature, humidity, false);
-    dewPoint = dht.computeDewPoint(temperature,humidity,false);
-    per = dht.computePerception(temperature, humidity,true);
-    stamp_DHT=now();
-  }
-
-   // Mise a jour des valeurs dht dans JSON
-    //DHTsensor
-
-    switch(ModelDHT) {
-      case 0 : Modele="Absent";
-      break;      
-      case 1 : Modele="DHT11";
-      break;
-      case 2 : Modele="DHT22";
-      break;
-      default : Modele="Inconnu";
-      break;
-    }
-
-  if (configSys.DEBUG) {
-      Serial.println("Valeur Sensor DHT :"+String(_dht));
-       Serial.println(" T:" + String(temperature) + "°C  H:" + String(humidity) + "%  I:" + String(heatIndex) + " D:" + String(dewPoint) + "  et per :"+ String(per));
-  }
-}
-
-// JSON
-// load config JSON Suystem
-void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
-   //Init buffer json config
-//const size_t capacityConfig = 2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(41) + 1500;
-  // Open file config
-  File file = LittleFS.open(fileconfig, "r");
-   if (!file) {
-     msgDebug+="Fonction load : Fichier Config absent ---";
-     //InfoDebugtInit=InfoDebugtInit+" Fichier config Jeedom absent -";
-     //if (configSys.DEBUG) Serial.println("Fichier Config absent");
-    }
-  DynamicJsonDocument docConfig(capacityConfig);
-  DeserializationError err = deserializeJson(docConfig, file);
-  if (err) {
-      msgDebug+="deserializeJson() failed: ";
-      msgDebug+=err.c_str();
-    }
-
-  // Initialisation des variables systémes pour configuration , si non présente valeur par defaut affecté
-  strlcpy(config.NTPSERVER,docConfig["NTPSERVER"] | "pool.ntp.org",sizeof(config.NTPSERVER));
-  strlcpy(config.hostName,docConfig["SUFFIXEHOST"] | "notifXL",sizeof(config.hostName));
-  strlcpy(config.msgMinuteur,docConfig["MSGMINUT"] | TXTMINUT,sizeof(config.msgMinuteur));
-  strlcpy(config.hflag,docConfig["HFLAG"] | HF,sizeof(config.hflag));
-  //config.timeZone = docConfig["TIMEZONE"] | UTC;
-  config.config = docConfig["CONFIG"] | false;
-  config.broker = docConfig["BROKER"] | BROKER_VALID;
-  strlcpy(config.servbroker,docConfig["SRVBROKER"] | BROKER_IP,sizeof(config.servbroker));
-  strlcpy(config.userbroker,docConfig["UBROKER"] | USERBROKER,sizeof(config.userbroker));
-  strlcpy(config.passbroker,docConfig["PBROKER"] | PASSBROKER,sizeof(config.passbroker));
-  strlcpy(config.prefixdiscovery,docConfig["PREFIXHA"] | DISCOVERY_PREFIX,sizeof(config.prefixdiscovery));
-  config.HA=docConfig["HA"] | false;
-  config.portbroker=docConfig["PORTBROKER"] | PORT_BROKER;
-  config.tempobroker=docConfig["TEMPOBROKER"] | TEMPO_BROKER;
-  config.DEBUG = docConfig["DEBUG"] | DEBUG_DEF;
-  config.pauseTime=docConfig["PAUSE"] | PAUSE_TIME;
-  config.scrollSpeed=docConfig["SPEED"] | SCROLL_SPEED;
-  config.intensity=docConfig["INTENSITY"] | 2;
-  config.SEC=docConfig["SEC"] | true;
-  config.HOR=docConfig["HOR"] | true;
-  config.LUM=docConfig["LUM"] | true;
-  config.REV=docConfig["REV"] | false;
-  config.DHT=docConfig["DDHT"] | false;
-  config.offsetT=docConfig["OFT"] | 0;
-  config.offsetH=docConfig["OFH"] | 0;
-  config.tempDDHT=docConfig["TEMPDDHT"] | TEMPODDHT;
-  
-  config.charOff=docConfig["CHAROFF"] | ' ';
-  config.timeAdjust=docConfig["TIMEADJUST"] | OFFSET_ADJUST;
-  strlcpy(config.textnotif,docConfig["TEXTNOTIF"] | "Notif",sizeof(config.textnotif));
-  config.ALN=docConfig["ALN"] | true;
-  config.CrTime=docConfig["CRTIME"] | 5;
-  config.fxCR=docConfig["CRFX"] | 0;
-  config.fxAL=docConfig["ALFX"] | 0;
-  config.fxSoundCR=docConfig["CRFXSOUND"] | 0;
-  config.fxSoundAL=docConfig["ALFXSOUND"] | 0;
-  config.fxint=docConfig["FXINT"] | 100;
-  config.fxcolor=docConfig["FXCOLOR"] | 0;
-  config.MP3Start=docConfig["MP3START"] | _MP3START;
-  config.MP3Notif=docConfig["MP3NOTIF"] | _MP3NOTIF;
-  config.horon[0]=docConfig["HORON"][0] | 6;
-  config.horon[1]=docConfig["HORON"][1] | 0;
-  config.horoff[0]=docConfig["HOROFF"][0] | 22;
-  config.horoff[1]=docConfig["HOROFF"][1] | 0;
-  config.volumeAudio=docConfig["VOLUME"] | VOLUME ;
-  config.hoo=docConfig["HOO"] | false;
-  config.LED=docConfig["LED"] | false;
-  config.LEDINT=docConfig["LEDINT"]|BRIGHTNESS;
-  config.color=docConfig["COLOR"]| 0;
-  config.clic[0] = docConfig["btnclic"][0] | 1;
-  config.clic[1] = docConfig["btnclic"][1] | 2;
-  config.clic[2] = docConfig["btnclic"][2] | 3;
-  config.clic[3]= docConfig["btnclic"][3] | 6;
-  config.clic[4] = docConfig["btnclic"][4] | 7;
-  config.clic[5] = docConfig["btnclic"][5] | 4;
-  config.box=docConfig["BOX"] | false;
-  strlcpy(config.URL_Action1, docConfig["URL_ACT1"] | "N/A", sizeof(config.URL_Action1));
-  strlcpy(config.URL_Action2, docConfig["URL_ACT2"] | "N/A", sizeof(config.URL_Action2));
-  strlcpy(config.URL_Action3, docConfig["URL_ACT3"] | "N/A", sizeof(config.URL_Action3));
-  strlcpy(config.URL_Update, docConfig["URL_UPD"] | "N/A", sizeof(config.URL_Update));
-  config.action[0] = docConfig["ACTION"][0] | 0;
-  config.action[1] = docConfig["ACTION"][1] | 0;
-  config.tempoAutoLum = docConfig["TEMPOAUTOLUM"] | 20;
-  file.close();
-
-} // fin fonction loadconfig
-
-String createJson(sConfigSys  &config,bool flagCreate=false) {
-  String json;
-
-  //const size_t capacityConfig = 2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(41) + 1500;
-  DynamicJsonDocument docConfig(capacityConfig);
-  docConfig["HARDWARE"]=hardware;
-  if (flagCreate) docConfig["CONFIG"]=true;
-  else docConfig["CONFIG"]=config.config;
-  docConfig["NOM"]=hardConfig.nom;
-  docConfig["SEC"]=config.SEC;
-  docConfig["HOR"]=config.HOR;
-  docConfig["LUM"]=config.LUM;
-  docConfig["REV"]=config.REV;
-  docConfig["DDHT"]=config.DHT;
-  docConfig["TEMPDDHT"]=config.tempDDHT;
-  docConfig["MSGMINUT"]=config.msgMinuteur;
-  docConfig["HFLAG"]=config.hflag;
-
-  docConfig["NTPSERVER"]=config.NTPSERVER;
-  docConfig["SUFFIXEHOST"]=config.hostName;
-  docConfig["TZOFFSET"]=hardConfig.Offset;
-  docConfig["TIMEADJUST"]=config.timeAdjust;
-  docConfig["IDNOTIF"]=idNotif;
-  JsonArray dochon = docConfig.createNestedArray("HORON");
-  dochon.add(config.horon[0]);
-  dochon.add(config.horon[1]);
-  JsonArray dochoff = docConfig.createNestedArray("HOROFF");
-  dochoff.add(config.horoff[0]);
-  dochoff.add(config.horoff[1]);
-  docConfig["HOO"]=config.hoo;
-  docConfig["TEMPOAUTOLUM"]=config.tempoAutoLum;
-  //docConfig["DST"]=hardConfig.DST;
-  docConfig["TZNAME"]=hardConfig.TZname;
-  docConfig["DEBUG"]=config.DEBUG;
-  docConfig["SPEED"] =config.scrollSpeed;
-  docConfig["PAUSE"] =config.pauseTime;
-  docConfig["INTENSITY"]=config.intensity;
-  docConfig["CHAROFF"]=config.charOff;
-  docConfig["TEXTNOTIF"]=config.textnotif;
-  docConfig["ALN"]=config.ALN;
-  //info systeme
-  docConfig["MEMOJSON"]=docConfig.memoryUsage();
-  docConfig["VERSION"]=ver;
-  docConfig["MAC"]=WiFi.macAddress();
-  docConfig["RSSI"] = String(WiFi.RSSI())+" dBm";
-  docConfig["SSID"] = WiFi.SSID();
-  docConfig["CHANNEL"] = WiFi.channel();
-  docConfig["BSSID"] =WiFi.BSSIDstr();
-  docConfig["IP"] =WiFi.localIP().toString();
-  docConfig["HOSTNAME"] = WiFi.hostname();
-  docConfig["MDNS"]=mdnsName+".local";
-  docConfig["DNS"] = WiFi.dnsIP().toString();
-  docConfig["DNS2"] =  WiFi.dnsIP(1).toString();
-  docConfig["PASSERELLE"] = WiFi.gatewayIP().toString();
-  docConfig["MASQUE"] = WiFi.subnetMask().toString();
-  //options
-  docConfig["PHOTOCELL"] = _photocell;
-  docConfig["TYPEAUDIO"] = hardConfig.typeAudio;
-  docConfig["VOLUME"] = config.volumeAudio;
-  docConfig["MP3START"]=config.MP3Start;
-  docConfig["MP3NOTIF"]=config.MP3Notif;
-  docConfig["TOTALMP3"]=totalMP3;
-  docConfig["MP3_1"]=nMP3_1;
-  docConfig["TYPELED"] = hardConfig.typeLED;
-  docConfig["LED"]=config.LED;
-  docConfig["LEDINT"]=config.LEDINT;
-  docConfig["COLOR"]=config.color;
-  //temps
-  _upTime=now()-_startTime;
-  docConfig["STARTTIME"]=_startTime;
-  docConfig["UPTIME"]=_upTime;
-  docConfig["LASTSYNCHRO"]=_lastSynchro;
-  docConfig["DATE"]=now();
-  //DHT
-  GetTemp();
-  docConfig["DHT"] = _dht;
-  docConfig["TEMP"]= temperature;
-  docConfig["HUM"]= humidity;
-  docConfig["HI"]=heatIndex;
-  docConfig["ROSE"]=dewPoint;
-  docConfig["PER"]=per;
-  docConfig["STAMPDHT"]=stamp_DHT;
-  docConfig["DHTMODEL"]=Modele;
-  docConfig["DHTSTATUS"]= dht.getStatusString();
-  docConfig["OFT"]=config.offsetT;
-  docConfig["OFH"]=config.offsetH;
-//minuteur
-  docConfig["CR"]=CR;
-  docConfig["CRSTOP"]=CRStop;
-  docConfig["CRTIME"]=config.CrTime;
-//boutons
-  docConfig["BTN1"]=hardConfig.btn1;
-  docConfig["BTN2"]=hardConfig.btn2;
-      JsonArray btnclic = docConfig.createNestedArray("btnclic");
-    btnclic.add(config.clic[0]);
-    btnclic.add(config.clic[1]);
-    btnclic.add(config.clic[2]);
-    btnclic.add(config.clic[3]);
-    btnclic.add(config.clic[4]);
-    btnclic.add(config.clic[5]);
-  //FX
-  docConfig["FXINT"]=config.fxint;
-  docConfig["FXCOLOR"]=config.fxcolor;
-  docConfig["CRFX"]=config.fxCR;
-  docConfig["ALFX"]=config.fxAL;
-  docConfig["CRFXSOUND"]=config.fxSoundCR;
-  docConfig["ALFXSOUND"]=config.fxSoundAL;
-  //MQTT
-  docConfig["BROKER"]=config.broker;
-  docConfig["SRVBROKER"]=config.servbroker;
-  docConfig["UBROKER"]=config.userbroker;
-  docConfig["PBROKER"]=config.passbroker;
-  docConfig["PORTBROKER"]=config.portbroker;
-  docConfig["TOPIC"]=topicName+TOPIC_NOTIF;
-  docConfig["TOPICSTATE"]=topicName+TOPIC_STATE;
-  docConfig["TOPICOPT"]=topicName+TOPIC_OPTIONS;
-  docConfig["TOPICCFG"]=topicName+TOPIC_CONFIG;
-  docConfig["TEMPOBROKER"]=config.tempobroker;
-  docConfig["STATEBROKER"]=statebroker;
-  docConfig["PREFIXHA"]=config.prefixdiscovery;
-  docConfig["HA"]=config.HA;
-  //box
-  docConfig["INFO"]=infoBOX;
-  docConfig["BOX"]=config.box;
-  docConfig["URL_ACT1"]=config.URL_Action1;
-  docConfig["URL_ACT2"]=config.URL_Action2;
-  docConfig["URL_ACT3"]=config.URL_Action3;
-  docConfig["URL_UPD"]=config.URL_Update;
-  JsonArray action = docConfig.createNestedArray("ACTION");
-  action.add(config.action[0]);
-  action.add(config.action[1]);
-
-  //donnee hardConfig
-  docConfig["NETCODE"]=netcode;
-  docConfig["NETOK"]=netOK;
-  docConfig["NTPOK"]=ntpOK;
-  docConfig["TYPEMATRICE"]=String(HARDWARE_TYPE);
-  docConfig["XL"]=hardConfig.XL;
-  docConfig["MAXDISPLAY"]=hardConfig.maxDisplay;
-  docConfig["MAXZONEMSG"]=hardConfig.maxZonesMsg;
-  docConfig["ZONETIME"]=hardConfig.zoneTime;
-  docConfig["TOTALZONE"]=_maxZones;
-  docConfig["PERSO"]=hardConfig.perso;
-  docConfig["SETUP"]=hardConfig.setup;
-  JsonArray docZP = docConfig.createNestedArray("ZP");
-  for (int i=0;i<MAX;i++) {
-  docZP.add(hardConfig.ZP[i]);
-  }
-  if (flagCreate) docConfig["CONFIG"]=true;
-  // envoie config json
-  serializeJsonPretty(docConfig,json);
-  return json;
-}
-
-void saveConfigSys(const char *fileconfig,String json) {
-  File  f = LittleFS.open(fileconfig, "w");
-  if (!f) {
-    //InfoDebugtInit=InfoDebugtInit+" Fichier config Jeedom absent -";
-    if (configSys.DEBUG) Serial.println("Fichier Config absent - création fichier");
-    Serial.println("Fichier Config absent - création fichier");
-   }
-   f.print(json);  // sauvegarde de la chaine
-   f.close();
-}
-
-
 // fonction audio ( 0:none , 1 : Buzzer , 2 = MP3player , 4 = relais , 5 = sortie PIN digital)
 void audio(char action='P')
 {
@@ -1476,6 +1165,9 @@ switch (hardConfig.typeAudio) {
   if (action=='P') AUDIONOTIF=true;
   else AUDIONOTIF=false;
 }
+
+
+
 
 
 void cmdLED(bool val,int intLED=configSys.LEDINT,byte C=configSys.color) {
@@ -1642,6 +1334,7 @@ void fxLED(byte c=configSys.fxcolor) {
 if (notifLed.fx!=1) notifLed.fx=0;
 }
 
+
 void displayNotif(String Msg,uint8_t NZO=zoneMsg,byte type=0,textPosition_t pos=PA_LEFT, uint16_t S=configSys.scrollSpeed ,uint16_t P=configSys.pauseTime , byte fi=1,byte fo=1,char flag='D',byte An=0,int cycle=1,uint8_t lumNotif=configSys.intensity) {
   if (configSys.DEBUG) {
       Serial.println("**********************");
@@ -1788,42 +1481,279 @@ void displayNotif(String Msg,uint8_t NZO=zoneMsg,byte type=0,textPosition_t pos=
 
 }  // fin displaynotif
 
-//lecture historique
-void displayHisto() {
-//LuN=configSys.intensity;
-String msgHisto;
-char djh[5];
-static int iH=0;
-static uint32_t timerhist=0;
-if( millis() - timerhist >= 60000) {
-              iH = 0;
-               timerhist = millis();
-              }
-time_t t = histNotif[iH].date;
-sprintf(djh,"%02d:%02d",hour(t),minute(t));
-msgHisto=String(iH+1)+"/"+String(indexHist)+"-(";
-msgHisto+=String(djh)+") ";
-msgHisto+=histNotif[iH].Notif;
-displayNotif(msgHisto);
-if (iH>=indexHist-1) iH=0;
-else iH++;
-}
-
-// chaine decalage
-void createHStringXL(char *pH, char *pL)
-{
-
-  for (; *pL != '\0'; pL++)  *pH++ = *pL | 0x80; // decalage caractére en positionnant le 8 bit ( 128) à 1
-    *pH = '\0'; // termine la chaine
+int sendURL(char *Url) {
+String url = Url;
+int httpCode=0;
+int testurl= url.length();
+if (testurl>=6) {
+    http.begin(url);
+    httpCode = http.GET();
+    if (configSys.DEBUG) {
+          Serial.println("valeur de URL dans tobox : " + url);
+          Serial.println("valeur httpcode : " + httpCode);
+        }
+  }
+return httpCode;
 }
 
 
+//// Mesure DHT
+void GetTemp() {
+  int ModelDHT = 0 ;
+    temperature = dht.getTemperature() + configSys.offsetT;
+    humidity= dht.getHumidity() + configSys.offsetH;
 
-void createSecondes(char *Sec)
-{
+  if (isnan(humidity) || isnan(temperature)) {
+    _dht=false;
+    temperature = 0;
+    humidity= 0;
+    heatIndex = 0;
+    dewPoint = 0;
+    per = 0;
+  }
+  else {
+    _dht=true;
+    ModelDHT=dht.getModel();
+    heatIndex = dht.computeHeatIndex(temperature, humidity, false);
+    dewPoint = dht.computeDewPoint(temperature,humidity,false);
+    per = dht.computePerception(temperature, humidity,true);
+    stamp_DHT=now();
+  }
 
-  for (; *Sec != '\0'; Sec++)  *Sec = *Sec + 32;   // decalage caractére de 32
-    *Sec = '\0'; // termine la chaine
+   // Mise a jour des valeurs dht dans JSON
+    //DHTsensor
+
+    switch(ModelDHT) {
+      case 0 : Modele="Absent";
+      break;      
+      case 1 : Modele="DHT11";
+      break;
+      case 2 : Modele="DHT22";
+      break;
+      default : Modele="Inconnu";
+      break;
+    }
+
+  if (configSys.DEBUG) {
+      Serial.println("Valeur Sensor DHT :"+String(_dht));
+       Serial.println(" T:" + String(temperature) + "°C  H:" + String(humidity) + "%  I:" + String(heatIndex) + " D:" + String(dewPoint) + "  et per :"+ String(per));
+  }
+}
+
+String createJson(sConfigSys  &config,bool flagCreate=false) {
+  String json;
+
+  //const size_t capacityConfig = 2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(41) + 1500;
+  DynamicJsonDocument docConfig(capacityConfig);
+  docConfig["HARDWARE"]=hardware;
+  if (flagCreate) docConfig["CONFIG"]=true;
+  else docConfig["CONFIG"]=config.config;
+  docConfig["NOM"]=hardConfig.nom;
+  docConfig["SEC"]=config.SEC;
+  docConfig["HOR"]=config.HOR;
+  docConfig["LUM"]=config.LUM;
+  docConfig["REV"]=config.REV;
+  docConfig["DDHT"]=config.DHT;
+  docConfig["TEMPDDHT"]=config.tempDDHT;
+  docConfig["MSGMINUT"]=config.msgMinuteur;
+  docConfig["HFLAG"]=config.hflag;
+
+  docConfig["NTPSERVER"]=config.NTPSERVER;
+  docConfig["SUFFIXEHOST"]=config.hostName;
+  docConfig["TZOFFSET"]=hardConfig.Offset;
+  docConfig["TIMEADJUST"]=config.timeAdjust;
+  docConfig["IDNOTIF"]=idNotif;
+  JsonArray dochon = docConfig.createNestedArray("HORON");
+  dochon.add(config.horon[0]);
+  dochon.add(config.horon[1]);
+  JsonArray dochoff = docConfig.createNestedArray("HOROFF");
+  dochoff.add(config.horoff[0]);
+  dochoff.add(config.horoff[1]);
+  docConfig["HOO"]=config.hoo;
+  docConfig["TEMPOAUTOLUM"]=config.tempoAutoLum;
+  //docConfig["DST"]=hardConfig.DST;
+  docConfig["TZNAME"]=hardConfig.TZname;
+  docConfig["DEBUG"]=config.DEBUG;
+  docConfig["SPEED"] =config.scrollSpeed;
+  docConfig["PAUSE"] =config.pauseTime;
+  docConfig["INTENSITY"]=config.intensity;
+  docConfig["CHAROFF"]=config.charOff;
+  docConfig["TEXTNOTIF"]=config.textnotif;
+  docConfig["ALN"]=config.ALN;
+  //info systeme
+  docConfig["MEMOJSON"]=docConfig.memoryUsage();
+  docConfig["VERSION"]=ver;
+  docConfig["MAC"]=WiFi.macAddress();
+  docConfig["RSSI"] = String(WiFi.RSSI())+" dBm";
+  docConfig["SSID"] = WiFi.SSID();
+  docConfig["CHANNEL"] = WiFi.channel();
+  docConfig["BSSID"] =WiFi.BSSIDstr();
+  docConfig["IP"] =WiFi.localIP().toString();
+  docConfig["HOSTNAME"] = WiFi.hostname();
+  docConfig["MDNS"]=mdnsName+".local";
+  docConfig["DNS"] = WiFi.dnsIP().toString();
+  docConfig["DNS2"] =  WiFi.dnsIP(1).toString();
+  docConfig["PASSERELLE"] = WiFi.gatewayIP().toString();
+  docConfig["MASQUE"] = WiFi.subnetMask().toString();
+  //options
+  docConfig["PHOTOCELL"] = _photocell;
+  docConfig["TYPEAUDIO"] = hardConfig.typeAudio;
+  docConfig["VOLUME"] = config.volumeAudio;
+  docConfig["MP3START"]=config.MP3Start;
+  docConfig["MP3NOTIF"]=config.MP3Notif;
+  docConfig["TOTALMP3"]=totalMP3;
+  docConfig["MP3_1"]=nMP3_1;
+  docConfig["TYPELED"] = hardConfig.typeLED;
+  docConfig["LED"]=config.LED;
+  docConfig["LEDINT"]=config.LEDINT;
+  docConfig["COLOR"]=config.color;
+  //temps
+  _upTime=now()-_startTime;
+  docConfig["STARTTIME"]=_startTime;
+  docConfig["UPTIME"]=_upTime;
+  docConfig["LASTSYNCHRO"]=_lastSynchro;
+  docConfig["DATE"]=now();
+  //DHT
+  GetTemp();
+  docConfig["DHT"] = _dht;
+  docConfig["TEMP"]= temperature;
+  docConfig["HUM"]= humidity;
+  docConfig["HI"]=heatIndex;
+  docConfig["ROSE"]=dewPoint;
+  docConfig["PER"]=per;
+  docConfig["STAMPDHT"]=stamp_DHT;
+  docConfig["DHTMODEL"]=Modele;
+  docConfig["DHTSTATUS"]= dht.getStatusString();
+  docConfig["OFT"]=config.offsetT;
+  docConfig["OFH"]=config.offsetH;
+//minuteur
+  docConfig["CR"]=CR;
+  docConfig["CRSTOP"]=CRStop;
+  docConfig["CRTIME"]=config.CrTime;
+//boutons
+  docConfig["BTN1"]=hardConfig.btn1;
+  docConfig["BTN2"]=hardConfig.btn2;
+      JsonArray btnclic = docConfig.createNestedArray("btnclic");
+    btnclic.add(config.clic[0]);
+    btnclic.add(config.clic[1]);
+    btnclic.add(config.clic[2]);
+    btnclic.add(config.clic[3]);
+    btnclic.add(config.clic[4]);
+    btnclic.add(config.clic[5]);
+  //FX
+  docConfig["FXINT"]=config.fxint;
+  docConfig["FXCOLOR"]=config.fxcolor;
+  docConfig["CRFX"]=config.fxCR;
+  docConfig["ALFX"]=config.fxAL;
+  docConfig["CRFXSOUND"]=config.fxSoundCR;
+  docConfig["ALFXSOUND"]=config.fxSoundAL;
+  //MQTT
+  docConfig["BROKER"]=config.broker;
+  docConfig["SRVBROKER"]=config.servbroker;
+  docConfig["UBROKER"]=config.userbroker;
+  docConfig["PBROKER"]=config.passbroker;
+  docConfig["PORTBROKER"]=config.portbroker;
+  docConfig["TOPIC"]=topicName+TOPIC_NOTIF;
+  docConfig["TOPICSTATE"]=topicName+TOPIC_STATE;
+  docConfig["TOPICOPT"]=topicName+TOPIC_OPTIONS;
+  docConfig["TOPICCFG"]=topicName+TOPIC_CONFIG;
+  docConfig["TEMPOBROKER"]=config.tempobroker;
+  docConfig["STATEBROKER"]=statebroker;
+  docConfig["PREFIXHA"]=config.prefixdiscovery;
+  docConfig["HA"]=config.HA;
+  //box
+  docConfig["INFO"]=infoBOX;
+  docConfig["BOX"]=config.box;
+  docConfig["URL_ACT1"]=config.URL_Action1;
+  docConfig["URL_ACT2"]=config.URL_Action2;
+  docConfig["URL_ACT3"]=config.URL_Action3;
+  docConfig["URL_UPD"]=config.URL_Update;
+  JsonArray action = docConfig.createNestedArray("ACTION");
+  action.add(config.action[0]);
+  action.add(config.action[1]);
+
+  //donnee hardConfig
+  docConfig["NETCODE"]=netcode;
+  docConfig["NETOK"]=netOK;
+  docConfig["NTPOK"]=ntpOK;
+  docConfig["TYPEMATRICE"]=String(HARDWARE_TYPE);
+  docConfig["XL"]=hardConfig.XL;
+  docConfig["MAXDISPLAY"]=hardConfig.maxDisplay;
+  docConfig["MAXZONEMSG"]=hardConfig.maxZonesMsg;
+  docConfig["ZONETIME"]=hardConfig.zoneTime;
+  docConfig["TOTALZONE"]=_maxZones;
+  docConfig["PERSO"]=hardConfig.perso;
+  docConfig["SETUP"]=hardConfig.setup;
+  JsonArray docZP = docConfig.createNestedArray("ZP");
+  for (int i=0;i<MAX;i++) {
+  docZP.add(hardConfig.ZP[i]);
+  }
+  if (flagCreate) docConfig["CONFIG"]=true;
+  // envoie config json
+  serializeJsonPretty(docConfig,json);
+  return json;
+}
+
+void saveConfigSys(const char *fileconfig,String json) {
+  File  f = LittleFS.open(fileconfig, "w");
+  if (!f) {
+    //InfoDebugtInit=InfoDebugtInit+" Fichier config Jeedom absent -";
+    if (configSys.DEBUG) Serial.println("Fichier Config absent - création fichier");
+    Serial.println("Fichier Config absent - création fichier");
+   }
+   f.print(json);  // sauvegarde de la chaine
+   f.close();
+}
+
+void ToBox(char *Url,byte numero=0) {
+  int httpCode;
+  if (configSys.box)  {
+    httpCode=sendURL(Url);
+    String json="";
+    infoBOX=String(numero)+":"+String(httpCode);
+    json=createJson(configSys);
+    saveConfigSys(fileconfig,json);
+  }
+}
+
+//mqtt
+void MQTTsend() {
+  //update info temp
+      GetTemp();
+  String t;
+//  char topicS[80];
+  char buffer[512];
+  DynamicJsonDocument docMqtt(capacityConfig);
+ 
+  if (_dht) {
+  docMqtt["temperature"] = (String)temperature;
+  docMqtt["humidity"]= (String)humidity;
+  }
+  docMqtt["sec"] = configSys.SEC;
+  docMqtt["hor"] = configSys.HOR;
+  docMqtt["lum"] = configSys.LUM;
+  //docMqtt["rev"] = configSys.REV;
+  //docMqtt["cr"] = CR;
+  // Si led
+  if (hardConfig.typeLED >0 ) {
+    docMqtt["led"] =configSys.LED;
+    if (configSys.LED)  docMqtt["ledState"] ="on";
+      else docMqtt["ledState"] ="off";
+    if (hardConfig.typeLED == 1 || hardConfig.typeLED == 3) {
+    docMqtt["ledint"] =configSys.LEDINT;
+    // home assistant brillance sur 8 bits
+    int brightnessLed=configSys.LEDINT;
+   brightnessLed = map(brightnessLed,0,100,0,255);
+    docMqtt["brightnessLed"] =brightnessLed;
+    }
+  }
+  Serial.println("envoie publication MQTT");
+  //docMqtt["temperature"]=String(temperature);
+  size_t n = serializeJson(docMqtt, buffer);
+  t=topicName+String(TOPIC_STATE);
+  Serial.println(t);
+  //t.toCharArray(topicS,80);
+  MQTTclient.publish(t.c_str(), buffer,n);
 }
 
 
@@ -1873,72 +1803,25 @@ void cmdLum(bool val,byte I=configSys.intensity) {
   displayNotif(msgInfo,zoneMsg,9);
 }
 
-int sendURL(char *Url) {
-String url = Url;
-int httpCode=0;
-int testurl= url.length();
-if (testurl>=6) {
-    http.begin(url);
-    httpCode = http.GET();
-    if (configSys.DEBUG) {
-          Serial.println("valeur de URL dans tobox : " + url);
-          Serial.println("valeur httpcode : " + httpCode);
-        }
-  }
-return httpCode;
-}
-
-
-void ToBox(char *Url,byte numero=0) {
-  int httpCode;
-  if (configSys.box)  {
-    httpCode=sendURL(Url);
-    String json="";
-    infoBOX=String(numero)+":"+String(httpCode);
-    json=createJson(configSys);
-    saveConfigSys(fileconfig,json);
-  }
-}
-
-
-//mqtt
-void MQTTsend() {
-  //update info temp
-      GetTemp();
-  String t;
-//  char topicS[80];
-  char buffer[512];
-  DynamicJsonDocument docMqtt(capacityConfig);
- 
-  if (_dht) {
-  docMqtt["temperature"] = (String)temperature;
-  docMqtt["humidity"]= (String)humidity;
-  }
-  docMqtt["sec"] = configSys.SEC;
-  docMqtt["hor"] = configSys.HOR;
-  docMqtt["lum"] = configSys.LUM;
-  //docMqtt["rev"] = configSys.REV;
-  //docMqtt["cr"] = CR;
-  // Si led
-  if (hardConfig.typeLED >0 ) {
-    docMqtt["led"] =configSys.LED;
-    if (configSys.LED)  docMqtt["ledState"] ="on";
-      else docMqtt["ledState"] ="off";
-    if (hardConfig.typeLED == 1 || hardConfig.typeLED == 3) {
-    docMqtt["ledint"] =configSys.LEDINT;
-    // home assistant brillance sur 8 bits
-    int brightnessLed=configSys.LEDINT;
-   brightnessLed = map(brightnessLed,0,100,0,255);
-    docMqtt["brightnessLed"] =brightnessLed;
-    }
-  }
-  Serial.println("envoie publication MQTT");
-  //docMqtt["temperature"]=String(temperature);
-  size_t n = serializeJson(docMqtt, buffer);
-  t=topicName+String(TOPIC_STATE);
-  Serial.println(t);
-  //t.toCharArray(topicS,80);
-  MQTTclient.publish(t.c_str(), buffer,n);
+//lecture historique
+void displayHisto() {
+  //LuN=configSys.intensity;
+  String msgHisto;
+  char djh[5];
+  static int iH=0;
+  static uint32_t timerhist=0;
+  if( millis() - timerhist >= 60000) {
+                iH = 0;
+                timerhist = millis();
+                }
+  time_t t = histNotif[iH].date;
+  sprintf(djh,"%02d:%02d",hour(t),minute(t));
+  msgHisto=String(iH+1)+"/"+String(indexHist)+"-(";
+  msgHisto+=String(djh)+") ";
+  msgHisto+=histNotif[iH].Notif;
+  displayNotif(msgHisto);
+  if (iH>=indexHist-1) iH=0;
+  else iH++;
 }
 
 void BoutonAction(byte btn , byte btnclic ) {
@@ -2024,6 +1907,140 @@ if (configSys.broker) {
     MQTTclient.publish(topicN, payload);
  }
 }
+
+void alarme(sAlarme &alarme) {
+  Serial.println("Mode alarme");
+  //LuN=configSys.intensity;
+  notifLed=FX_led[alarme.fxAL];
+  notifAudio.fx=alarme.fxSoundAL;
+  displayNotif(alarme.msgAlarme,zoneTime);
+  if (configSys.box) BoutonAction(10 , configSys.action[1] );
+
+}
+
+void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
+{
+  for(int i=0; i<NB_ALARMES; i++)
+  {
+    if(Alarmes[i].alDay[day])
+    {
+      if(hour == Alarmes[i].heure && minute==Alarmes[i].minute)
+        Serial.println("Lancement de l'alarme " + i);
+        alarme(Alarmes[i]);
+    }
+  }
+}
+
+//******************************************************************************************************************//
+
+// JSON
+// load config JSON Suystem
+void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
+   //Init buffer json config
+//const size_t capacityConfig = 2*JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(41) + 1500;
+  // Open file config
+  File file = LittleFS.open(fileconfig, "r");
+   if (!file) {
+     msgDebug+="Fonction load : Fichier Config absent ---";
+     //InfoDebugtInit=InfoDebugtInit+" Fichier config Jeedom absent -";
+     //if (configSys.DEBUG) Serial.println("Fichier Config absent");
+    }
+  DynamicJsonDocument docConfig(capacityConfig);
+  DeserializationError err = deserializeJson(docConfig, file);
+  if (err) {
+      msgDebug+="deserializeJson() failed: ";
+      msgDebug+=err.c_str();
+    }
+
+  // Initialisation des variables systémes pour configuration , si non présente valeur par defaut affecté
+  strlcpy(config.NTPSERVER,docConfig["NTPSERVER"] | "pool.ntp.org",sizeof(config.NTPSERVER));
+  strlcpy(config.hostName,docConfig["SUFFIXEHOST"] | "notifXL",sizeof(config.hostName));
+  strlcpy(config.msgMinuteur,docConfig["MSGMINUT"] | TXTMINUT,sizeof(config.msgMinuteur));
+  strlcpy(config.hflag,docConfig["HFLAG"] | HF,sizeof(config.hflag));
+  //config.timeZone = docConfig["TIMEZONE"] | UTC;
+  config.config = docConfig["CONFIG"] | false;
+  config.broker = docConfig["BROKER"] | BROKER_VALID;
+  strlcpy(config.servbroker,docConfig["SRVBROKER"] | BROKER_IP,sizeof(config.servbroker));
+  strlcpy(config.userbroker,docConfig["UBROKER"] | USERBROKER,sizeof(config.userbroker));
+  strlcpy(config.passbroker,docConfig["PBROKER"] | PASSBROKER,sizeof(config.passbroker));
+  strlcpy(config.prefixdiscovery,docConfig["PREFIXHA"] | DISCOVERY_PREFIX,sizeof(config.prefixdiscovery));
+  config.HA=docConfig["HA"] | false;
+  config.portbroker=docConfig["PORTBROKER"] | PORT_BROKER;
+  config.tempobroker=docConfig["TEMPOBROKER"] | TEMPO_BROKER;
+  config.DEBUG = docConfig["DEBUG"] | DEBUG_DEF;
+  config.pauseTime=docConfig["PAUSE"] | PAUSE_TIME;
+  config.scrollSpeed=docConfig["SPEED"] | SCROLL_SPEED;
+  config.intensity=docConfig["INTENSITY"] | 2;
+  config.SEC=docConfig["SEC"] | true;
+  config.HOR=docConfig["HOR"] | true;
+  config.LUM=docConfig["LUM"] | true;
+  config.REV=docConfig["REV"] | false;
+  config.DHT=docConfig["DDHT"] | false;
+  config.offsetT=docConfig["OFT"] | 0;
+  config.offsetH=docConfig["OFH"] | 0;
+  config.tempDDHT=docConfig["TEMPDDHT"] | TEMPODDHT;
+  
+  config.charOff=docConfig["CHAROFF"] | ' ';
+  config.timeAdjust=docConfig["TIMEADJUST"] | OFFSET_ADJUST;
+  strlcpy(config.textnotif,docConfig["TEXTNOTIF"] | "Notif",sizeof(config.textnotif));
+  config.ALN=docConfig["ALN"] | true;
+  config.CrTime=docConfig["CRTIME"] | 5;
+  config.fxCR=docConfig["CRFX"] | 0;
+  config.fxAL=docConfig["ALFX"] | 0;
+  config.fxSoundCR=docConfig["CRFXSOUND"] | 0;
+  config.fxSoundAL=docConfig["ALFXSOUND"] | 0;
+  config.fxint=docConfig["FXINT"] | 100;
+  config.fxcolor=docConfig["FXCOLOR"] | 0;
+  config.MP3Start=docConfig["MP3START"] | _MP3START;
+  config.MP3Notif=docConfig["MP3NOTIF"] | _MP3NOTIF;
+  config.horon[0]=docConfig["HORON"][0] | 6;
+  config.horon[1]=docConfig["HORON"][1] | 0;
+  config.horoff[0]=docConfig["HOROFF"][0] | 22;
+  config.horoff[1]=docConfig["HOROFF"][1] | 0;
+  config.volumeAudio=docConfig["VOLUME"] | VOLUME ;
+  config.hoo=docConfig["HOO"] | false;
+  config.LED=docConfig["LED"] | false;
+  config.LEDINT=docConfig["LEDINT"]|BRIGHTNESS;
+  config.color=docConfig["COLOR"]| 0;
+  config.clic[0] = docConfig["btnclic"][0] | 1;
+  config.clic[1] = docConfig["btnclic"][1] | 2;
+  config.clic[2] = docConfig["btnclic"][2] | 3;
+  config.clic[3]= docConfig["btnclic"][3] | 6;
+  config.clic[4] = docConfig["btnclic"][4] | 7;
+  config.clic[5] = docConfig["btnclic"][5] | 4;
+  config.box=docConfig["BOX"] | false;
+  strlcpy(config.URL_Action1, docConfig["URL_ACT1"] | "N/A", sizeof(config.URL_Action1));
+  strlcpy(config.URL_Action2, docConfig["URL_ACT2"] | "N/A", sizeof(config.URL_Action2));
+  strlcpy(config.URL_Action3, docConfig["URL_ACT3"] | "N/A", sizeof(config.URL_Action3));
+  strlcpy(config.URL_Update, docConfig["URL_UPD"] | "N/A", sizeof(config.URL_Update));
+  config.action[0] = docConfig["ACTION"][0] | 0;
+  config.action[1] = docConfig["ACTION"][1] | 0;
+  config.tempoAutoLum = docConfig["TEMPOAUTOLUM"] | 20;
+  file.close();
+
+} // fin fonction loadconfig
+
+
+
+
+
+// chaine decalage
+void createHStringXL(char *pH, char *pL)
+{
+
+  for (; *pL != '\0'; pL++)  *pH++ = *pL | 0x80; // decalage caractére en positionnant le 8 bit ( 128) à 1
+    *pH = '\0'; // termine la chaine
+}
+
+
+
+void createSecondes(char *Sec)
+{
+
+  for (; *Sec != '\0'; Sec++)  *Sec = *Sec + 32;   // decalage caractére de 32
+    *Sec = '\0'; // termine la chaine
+}
+
 
 void displayTimer(char *psz,bool f) {
    int h,m,s;
@@ -3051,17 +3068,6 @@ notifLed.fx=notifLed.fx+2;
 else notifLed.fx=0;
 if (notifLed.fx>0) fxLED(Blue);
 }
-
-void alarme(sAlarme &alarme) {
-  Serial.println("Mode alarme");
-  //LuN=configSys.intensity;
-  notifLed=FX_led[alarme.fxAL];
-  notifAudio.fx=alarme.fxSoundAL;
-  displayNotif(alarme.msgAlarme,zoneTime);
-  if (configSys.box) BoutonAction(10 , configSys.action[1] );
-
-}
-
 
 void MQTTcallback(char* topic, byte* payload, unsigned int length) {
 String t;
