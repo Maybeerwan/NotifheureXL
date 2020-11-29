@@ -825,6 +825,7 @@ sprite[] =
 // Gestion des alarmes //
 #define NB_ALARMES 3
 const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES* (JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12)) + 1;
+const size_t capacityAlarme = JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12) + 1;
 
 struct sAlarme {				
   char nom[50];   // nom de l'alarme
@@ -841,7 +842,7 @@ struct sAlarme {
   bool led;
 };
 
-sAlarme Alarmes[5];  // Nombre d'alarmes
+sAlarme Alarmes[NB_ALARMES];  // Nombre d'alarmes
 
  //void setType() {MD_MAX72XX::setModuleType(HARDWARE_TYPE);}
 /*************************
@@ -962,6 +963,7 @@ info="H:ok";
    histo[i].flag=flag[i];
   }
    indexHist=index;
+   file.close();
 return info;
 }
 
@@ -1024,11 +1026,11 @@ bool checkFlag(char F) {
 
 // Chargement des alarmes
 void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
-
+  Serial.println("loadAlarmes : Chargement des alarmes");
   // Open file 
 	File file = LittleFS.open(fileAlarmes, "r");
 	if (!file) {
-		msgDebug+="Fonction load : Fichier Alarmes absent ---";
+		msgDebug+="Fonction load : Fichier Alarmes absent --- " ;
 	}
 	DynamicJsonDocument docAlarmes(capacityAlarmes);
 	DeserializationError err = deserializeJson(docAlarmes, file);
@@ -1074,12 +1076,16 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
 	}
 
 	file.close();
+  Serial.println("loadAlarmes fin : " + msgDebug);
+  // Serial.println("loadAlarmes : Chargement des alarmes OK");
 }
 
 String createAlarmeJson(sAlarme  *alarmes) {
+  // Serial.println("createAlarmeJson : creation du json");
   String json;
   DynamicJsonDocument doc(capacityAlarmes);
-  
+
+  // JsonObject obj = doc.createNestedObject();
   doc["NbAlarmes"] = NB_ALARMES;
   
   JsonArray docAlarmes = doc.createNestedArray("alarmes");
@@ -1114,10 +1120,19 @@ String createAlarmeJson(sAlarme  *alarmes) {
 
 }
   // envoie alarmes json
-  serializeJsonPretty(docAlarmes,json);
+  serializeJsonPretty(doc,json);
+  Serial.println("createAlarmeJson : creation du json OK");
   return json;
 }
 
+void saveAlarmes(const char *fileAlarmes,String json) {
+  File  f = LittleFS.open(fileAlarmes, "w");
+  if (!f) {
+    Serial.println("Fichier alarmes absent - création fichier");
+   }
+   f.print(json);  // sauvegarde de la chaine
+   f.close();
+}
 
 // fonction audio ( 0:none , 1 : Buzzer , 2 = MP3player , 4 = relais , 5 = sortie PIN digital)
 void audio(char action='P')
@@ -1165,9 +1180,6 @@ switch (hardConfig.typeAudio) {
   if (action=='P') AUDIONOTIF=true;
   else AUDIONOTIF=false;
 }
-
-
-
 
 
 void cmdLED(bool val,int intLED=configSys.LEDINT,byte C=configSys.color) {
@@ -1920,13 +1932,19 @@ void alarme(sAlarme &alarme) {
 
 void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
 {
+  // Serial.println("Vérification des alarmes j" + day);
   for(int i=0; i<NB_ALARMES; i++)
   {
     if(Alarmes[i].alDay[day])
     {
       if(hour == Alarmes[i].heure && minute==Alarmes[i].minute)
-        Serial.println("Lancement de l'alarme " + i);
-        alarme(Alarmes[i]);
+      {  
+        if (seconde <5 && seconde >0 )
+        {
+          Serial.println("Lancement de l'alarme " + i);
+          alarme(Alarmes[i]);
+        }
+      }
     }
   }
 }
@@ -1943,7 +1961,7 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
    if (!file) {
      msgDebug+="Fonction load : Fichier Config absent ---";
      //InfoDebugtInit=InfoDebugtInit+" Fichier config Jeedom absent -";
-     //if (configSys.DEBUG) Serial.println("Fichier Config absent");
+     Serial.println("Fichier Config absent");
     }
   DynamicJsonDocument docConfig(capacityConfig);
   DeserializationError err = deserializeJson(docConfig, file);
@@ -2219,7 +2237,7 @@ bool optionsBool( bool *pOpt, String val) {
   else if (val == "false" || val =="0")  newval=false;  //*pOpt=false;
   else result=false;
   if (newval != *pOpt) *pOpt=newval;
-  else result=false;
+  // else result=false;
   if (configSys.DEBUG)  Serial.println("valeur test = "+String(result));
   return result;
 }
@@ -2734,7 +2752,7 @@ void updateOptions() {
 
 void handleAlarme() {
   
-  DynamicJsonDocument docAlarme(capacityAlarmes); // TODO eventuellement réduire la capacite
+  DynamicJsonDocument docAlarme(capacityAlarme); // TODO eventuellement réduire la capacite
   docAlarme["ID"] = -1; // identifiant par défaut
   String key,value, rep;
   // lecture des tout les arguments
@@ -2743,37 +2761,46 @@ void handleAlarme() {
     key.toUpperCase();
     value=server.arg(i);
     docAlarme[key]=value;
+     Serial.println("configAlarme : " + key + " : " + value);
   }
-  // si argument avec identifiant alors on mets à jour
-  if(docAlarme["ID"] > -1) {
-    int i = docAlarme["ID"];
-    // parametre
-    strlcpy(Alarmes[i].nom,docAlarme["nom"], sizeof(Alarmes[i].nom));
-    Alarmes[i].actif = docAlarme["actif"] | false;		
-    Alarmes[i].heure = docAlarme["heure"] | 0;
-    Alarmes[i].minute = docAlarme["minute"] | 0;
-    // alarme jours
-    Alarmes[i].alDay[0] = docAlarme["ALDAY0"] | false;
-    Alarmes[i].alDay[1] = docAlarme["ALDAY1"] | false;
-    Alarmes[i].alDay[2] = docAlarme["ALDAY2"] | false;
-    Alarmes[i].alDay[3] = docAlarme["ALDAY3"] | false;
-    Alarmes[i].alDay[4] = docAlarme["ALDAY4"] | false;
-    Alarmes[i].alDay[5] = docAlarme["ALDAY5"] | false;
-    Alarmes[i].alDay[6] = docAlarme["ALDAY6"] | false; 
 
-    strlcpy(Alarmes[i].msgAlarme,docAlarme["msgAlarme"], sizeof(Alarmes[i].msgAlarme));
-    Alarmes[i].fxAL = docAlarme["fxAL"] | 0;         
-    Alarmes[i].fxSoundAL = docAlarme["fxSoundAL"] | 0;    
-    Alarmes[i].action = docAlarme["action"] | 0;     
-    Alarmes[i].volumeAudio = docAlarme["volumeAudio"] | 0;	
-    Alarmes[i].pisteMP3 = docAlarme["pisteMP3"] | 0;
-    Alarmes[i].led = docAlarme["led"] | false;
+  int i = docAlarme["ID"];
+  Serial.println("configAlarme : mise à jour de l'alarme " + i);
+  // si argument avec identifiant alors on mets à jour
+  if(i>-1 && i< NB_ALARMES) {
+    
+    // parametre 
+    strlcpy(Alarmes[i].nom,docAlarme["NOM"], sizeof(Alarmes[i].nom));
+    if(!optionsBool(&Alarmes[i].actif, docAlarme["ACTIF"])) { Alarmes[i].actif=false;}		// optionsNum(&configSys.color,value,0,7)
+    optionsNum(&Alarmes[i].heure, docAlarme["HEURE"],0,23);
+    optionsNum(&Alarmes[i].minute, docAlarme["MINUTE"],0,59);
+    // alarme jours
+    // optionsSplit(Alarmes[i].alDay,docAlarme["ALDAY"]+":",':')
+    if(!optionsBool(&(Alarmes[i].alDay[0]), docAlarme["ALDAY0"])) { Alarmes[i].alDay[0]=false;}
+    if(!optionsBool(&(Alarmes[i].alDay[1]), docAlarme["ALDAY1"])) { Alarmes[i].alDay[1]=false;}
+    if(!optionsBool(&(Alarmes[i].alDay[2]), docAlarme["ALDAY2"])) { Alarmes[i].alDay[2]=false;}
+    if(!optionsBool(&(Alarmes[i].alDay[3]), docAlarme["ALDAY3"])) { Alarmes[i].alDay[3]=false;}
+    if(!optionsBool(&(Alarmes[i].alDay[4]), docAlarme["ALDAY4"])) { Alarmes[i].alDay[4]=false;}
+    if(!optionsBool(&(Alarmes[i].alDay[5]), docAlarme["ALDAY5"])) { Alarmes[i].alDay[5]=false;}
+    if(!optionsBool(&(Alarmes[i].alDay[6]), docAlarme["ALDAY6"])) { Alarmes[i].alDay[6]=false;}
+
+    strlcpy(Alarmes[i].msgAlarme,docAlarme["MSGALARME"], sizeof(Alarmes[i].msgAlarme));
+    
+    optionsNum(&Alarmes[i].fxAL, docAlarme["fxAL"],0,5);        
+    optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
+    // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
+    optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,30);	
+    optionsNum(&Alarmes[i].pisteMP3, docAlarme["PISTEMP3"],0,totalMP3);
+    if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].alDay[6]=false;}
+    Serial.println("configAlarme : mise à jour de l'alarme terminee");
 	}
 
     String json=createAlarmeJson(Alarmes);
-    saveConfigSys(fileAlarmes,json);
+    // Serial.println("configAlarme : sauvegarde de l'alarme");
+    saveAlarmes(fileAlarmes,json);
+    // Serial.println("configAlarme : sauvegarde de l'alarme terminee");
 
-  server.send(200,"text/plane",createAlarmeJson(Alarmes));
+  server.send(200,"application/json",json);
 
 }
 
@@ -3025,8 +3052,6 @@ if (cpttime>=TEMPONTP) {
   displayNotif(infomsg,zoneTime,9);
 }
 
-
-
 void Led_out() {
   if (configSys.DEBUG) Serial.println("setup led : "+String(hardConfig.typeLED));
 
@@ -3262,8 +3287,11 @@ void setup() {
  infoSetup(0,"Start ...");
 
  // ******************* chargement donnée systémes
- // init spiffs
- LittleFS.begin();
+ // init LittleFS
+ // LittleFS.begin();
+ if(!LittleFS.begin()){
+    Serial.println("An Error has occurred while mounting LittleFS");
+  }
    // lecture fichier json dans memoire SPIFFS
    loadConfigSys(fileconfig, configSys);
    if (hardConfig.setup) _pagehtml="index.html";
@@ -3851,9 +3879,9 @@ if (configSys.broker) {
     }
 
     // Alarme
-    if (configSys.REV) {
+    //if (configSys.REV) {
       verifierAlarme(weekday()-1, hour(), minute(), second());
-    }
+    //}
 
     // AutoOn - display horloge
     if (configSys.hoo) {
