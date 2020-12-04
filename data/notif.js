@@ -696,20 +696,68 @@ if (res[0]=="INT") {
 }
 
 
-function upAl() {
-  $("#blocAl").addClass("text-danger");
-  $("#blocAl").removeClass("text-secondary");
-  $("#blocAl h3").text("Alarme Active");
-  $("#blocAl h1").text($("#Alarme input").val());
- Options("TIMEREV");
-}
+function Alarmes(id, cle = "" , valeur = "") {
 
-function stopAl() {
-  $("#blocAl").addClass("text-secondary");
-  $("#blocAl").removeClass("text-danger");
-  $("#blocAl h3").text("Alarme Inactive");
-  Options("REV");
-}
+  key = ((typeof cle != 'object') ? cle : key=$(this).attr('id'));
+  console.log ( "Alarmes : valeur de key :"+$(this).attr('id')+" et type cle "+typeof cle);
+  heure = "";
+  //if (key=="LUM") checkLum();
+  //if (key=="LED") checkLed();
+  //if (key=="INT" || key=="COLOR")   val=$(this).val();
+  //else if (key=="BRI")   { val=$(this).val()+"&COLOR="+$("#COLOR").val();key="LEDINT";}
+  //else if (key=="TIMEREV")  { val=$("#blocAl h1").text();}
+  //else if (key=="REV")   val=false;
+  if (key=="ACTIF") 
+  {
+    val=valeur;
+    if(val=="True")
+    {
+      time=$("#blocAl"+id+" h1").text().split(":");
+      heure = "&heure="+time[0]+"&minute="+time[1];
+    }
+  }
+  else val=$(this).prop('checked');
+  
+  console.log ("Envoie des valeur "+key+" et "+val + " pour l'alarme d'id "+id+ " " + heure);
+  url="/configAlarme?ID="+(id-1)+"&"+key+"="+val+heure; 
+  $.get(url, function( data ) {
+  var res = data.split(":");
+  console.log("retour serveur : "+data);
+  if (res[0]=="INT") {
+    $('#INT').val(res[1]);
+    $('#INT').rangeslider('update', true);
+    }
+  
+  });
+  }
+
+  /**
+   * si activation de l'alarme
+   * @param {*} e event correspondant au bouton pressé
+   */
+  function upAl(e) {;
+    var boutonid = e.target.id || e.target.parentNode.id
+    var id = boutonid.substring("btn_upAl".length);
+
+    $("#blocAl"+id).addClass("text-danger");
+    $("#blocAl"+id).removeClass("text-secondary");
+    $("#blocAl"+id+" h3").text("Alarme Active");
+    $("#blocAl"+id+" h1").text($("#Alarme"+id+" input").val());
+    Alarmes(id, "ACTIF", "True");
+  }
+  /**
+   * si desactivation de l'alarme
+   * @param {*} e event correspondant au bouton pressé
+   */
+  function stopAl(e) {
+    var boutonid = e.target.id || e.target.parentNode.id
+    var id = boutonid.substring("btn_stopAl".length);
+
+    $("#blocAl"+id).addClass("text-secondary");
+    $("#blocAl"+id).removeClass("text-danger");
+    $("#blocAl"+id+" h3").text("Alarme Inactive");
+    Alarmes(1, "ACTIF", "False");
+  }
 
 /*
 $('#Alarme').on('change.datetimepicker', function(e) {
@@ -860,8 +908,12 @@ $('#BRI').on('change',Options);
 $('.alday').on('change',checkDay);
 $('#COLOR').on('change',Options);
 $('#DDHT').on('change',Options);
-$('#btn_upAl').on('click',upAl);
-$('#btn_stopAl').on('click',stopAl);
+
+for (i=1;i<=5;i++) {
+  $('#btn_upAl'+i).on('click',upAl);
+  $('#btn_stopAl'+i).on('click',stopAl);
+}
+
 $('input[type="range"]').rangeslider({
  polyfill: false
 });
