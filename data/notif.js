@@ -11,6 +11,7 @@ var mois = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","
 var typeAudio = ["Absent","HP / Buzzer","MP3Player","Autre"];
 var typeLed= ["Absent","LED Interne","Commande Relais","Neopixel Ring","Sortie Digitale"];
 var buzMusic=["Mission Impossible","Star Wars","Indiana Jones","Panthere Rose","Famille Adam's","l'exorciste","The simpsons","Tetris","Arkanoid","Super Mario","Xfiles","AxelF","PacMan","dambuste","Muppet show","James Bond","Take On Me","Agence tout risque","Top Gun","les Schtroumpfs","l'arnaque","looney Tunes","20 century fox","Le bon, la brute ...","Retour vers le futur"];
+var pisteMP3=["Piste 1", "piste2", "piste 3"];
 var ZXL=["Zone XL","Zone XL haut","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone notif 6"];
 var Z=["Zone Horloge","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone Notif 6","Zone Notif 7"];
 var fx=[ 'PRINT','SCROLL_LEFT','SCROLL_UP_LEFT','SCROLL_DOWN_LEFT','SCROLL_UP','GROW_UP','SCAN_HORIZ','BLINDS','WIPE','SCAN_VERTX','SLICE','FADE','OPENING_CURSOR','NO_EFFECT','SPRITE','CLOSING','SCAN_VERT','WIPE_CURSOR','SCAN_HORIZX','DISSOLVE','MESH','OPENING','CLOSING_CURSOR','GROW_DOWN','SCROLL_DOWN','SCROLL_DOWN_RIGHT','SCROLL_UP_RIGHT','SCROLL_RIGHT','RANDOM'];
@@ -26,6 +27,7 @@ var ajaxload=false;
 var ver;
 var pause;
 var color;
+var nbAlarme=6;
 
 function IsJsonString(str) {
 try {
@@ -529,8 +531,6 @@ function mdns_Info(IP,n) {
 
 }
 
-
-
 function getMdns() {
   $('#inforafraichir').text(" ... Scan du reseau en cours ...");
   $('#mdnslist').html("");
@@ -661,13 +661,6 @@ function checkLed()
 
 }
 
-function checkDay() {
-  ald="false,";
-  for (i=1;i<8;i++) {
-    ald+=$("#alday"+i).prop('checked')+",";
-  }
-Options('ALD',ald);
-}
 
 function Options(cle = "" , valeur = "") {
 
@@ -700,26 +693,35 @@ function Alarmes(id, cle = "" , valeur = "") {
 
   key = ((typeof cle != 'object') ? cle : key=$(this).attr('id'));
   console.log ( "Alarmes : valeur de key :"+$(this).attr('id')+" et type cle "+typeof cle);
-  heure = "";
-  //if (key=="LUM") checkLum();
-  //if (key=="LED") checkLed();
-  //if (key=="INT" || key=="COLOR")   val=$(this).val();
-  //else if (key=="BRI")   { val=$(this).val()+"&COLOR="+$("#COLOR").val();key="LEDINT";}
-  //else if (key=="TIMEREV")  { val=$("#blocAl h1").text();}
-  //else if (key=="REV")   val=false;
+  additional = "";
+ 
   if (key=="ACTIF") 
   {
     val=valeur;
     if(val=="True")
     {
-      time=$("#blocAl"+id+" h1").text().split(":");
-      heure = "&heure="+time[0]+"&minute="+time[1];
+      time=$("#reveil"+id+" #blocAl h1").text().split(":");
+      additional = "&heure="+time[0]+"&minute="+time[1];
+      var nom = $("#reveil"+id+" #titre h3").text();
+      if(nom!="") additional+= "&nom="+nom;
+      
+      if ($('#reveilAudio'+id).prop('checked')) {
+        console.log("alarme sonore");
+        if (tA==1) {
+          additional+="&FXSOUNDAL="+$("#selectTheme"+id+" option:selected").val();
+        }
+        else if (tA==2) {
+          additional+="&VOLUMEAUDIO"+$("#volAUDIO"+id).val();
+          additional+="&PISTEMP3="+$("#pistemp3"+id+" option:selected").val();
+        }
+      }
     }
   }
+  else if (key=="ALD") val=valeur;
   else val=$(this).prop('checked');
   
-  console.log ("Envoie des valeur "+key+" et "+val + " pour l'alarme d'id "+id+ " " + heure);
-  url="/configAlarme?ID="+(id-1)+"&"+key+"="+val+heure; 
+  console.log ("Envoie des valeur "+key+" et "+val + " pour l'alarme d'id "+id+ " " + additional);
+  url="/configAlarme?ID="+(id-1)+"&"+key+"="+val+additional; 
   $.get(url, function( data ) {
   var res = data.split(":");
   console.log("retour serveur : "+data);
@@ -731,6 +733,39 @@ function Alarmes(id, cle = "" , valeur = "") {
   });
   }
 
+
+  function checkDay(e) {
+    var reveilid = e.target.value || e.target.parentNode.value
+    ald="";
+    for (i=1;i<8;i++) {
+      ald+=$("#reveil"+reveilid+" #alday"+i).prop('checked')+",";
+    }
+    Alarmes(reveilid,'ALD',ald);
+  }
+
+  /***
+   * Apeler si activ ation notification audio pour le réveil
+   * @param {*} e event correspondant au bouton pressé
+   */
+  function revailAudio(e){
+    var boutonid = e.target.id || e.target.parentNode.id
+    var id = boutonid.substring("reveilAudio".length);
+      console.log("toto : " + id); // DOTO
+      tA=2;
+     if ($(this).prop('checked'))  {
+      if (tA==1 ) {
+          $('#groupAUDIO1_'+id).removeClass("d-none");
+        }
+        else if (tA==2) {
+            $('#groupAUDIO2_'+id).removeClass("d-none");
+            valueOutput(document.getElementById('volAUDIO'+id));
+            $('#volAUDIO'+id).rangeslider('update', true);
+          }
+     }
+     else {
+       $('#groupAUDIO'+tA+"_"+id).addClass("d-none");
+     }
+  }
   /**
    * si activation de l'alarme
    * @param {*} e event correspondant au bouton pressé
@@ -739,10 +774,13 @@ function Alarmes(id, cle = "" , valeur = "") {
     var boutonid = e.target.id || e.target.parentNode.id
     var id = boutonid.substring("btn_upAl".length);
 
-    $("#blocAl"+id).addClass("text-danger");
-    $("#blocAl"+id).removeClass("text-secondary");
-    $("#blocAl"+id+" h3").text("Alarme Active");
-    $("#blocAl"+id+" h1").text($("#Alarme"+id+" input").val());
+    $("#reveil"+id+" #blocAl").addClass("text-danger");
+    $("#reveil"+id+" #blocAl").removeClass("text-secondary");
+    $("#reveil"+id+" #blocAl h3").text("Alarme Active");
+    $("#reveil"+id+" #blocAl h1").text($("#reveil"+id+" #Alarme input").val());
+    nom = $("#reveil"+id+" #reveilTitle input").val();
+    if(nom!="") $("#reveil"+id+" #titre h3").text(nom);
+
     Alarmes(id, "ACTIF", "True");
   }
   /**
@@ -753,28 +791,134 @@ function Alarmes(id, cle = "" , valeur = "") {
     var boutonid = e.target.id || e.target.parentNode.id
     var id = boutonid.substring("btn_stopAl".length);
 
-    $("#blocAl"+id).addClass("text-secondary");
-    $("#blocAl"+id).removeClass("text-danger");
-    $("#blocAl"+id+" h3").text("Alarme Inactive");
-    Alarmes(1, "ACTIF", "False");
+    $("#reveil"+id+" #blocAl").addClass("text-secondary");
+    $("#reveil"+id+" #blocAl").removeClass("text-danger");
+    $("#reveil"+id+" #blocAl h3").text("Alarme Inactive");
+
+    Alarmes(id, "ACTIF", "False");
   }
 
-/*
-$('#Alarme').on('change.datetimepicker', function(e) {
-        // `e` here contains the extra attributes
-        //if ("#REV".prop('checked'))
-        var formatedValue = e.date.format("HHmm");
-        alert(formatedValue);
-    });
+function getHtmlLiAlarme(id, visible)
+{
+  var html = "<li class=\"nav-item\"><a class=\"nav-link show"+ (visible?" active bg":"")+"\" data-toggle=\"tab\" href=\"#reveil"+id+"\">Réveil "+id+"</a></li>";
+  return html;
+}
+
+/**
+ * A voir pour faire de façon générique le code HTML des alamres...
+ * @param {id de l'alarme} id 
+ */
+function getHtmlAlarme(id,visible){
+  // console.log("start HtmlAlarme " + id);
+
+  var html =" <div class=\"tab-pane fade"+ (visible?" active show":"")+"\" id=\"reveil"+id+"\">"; 
+  html+="<div class=\"card border-primary\">";
+  html+="    <div class=\"card-header bg-primary \" id=\"titre\">";
+  html+="      <h3 class=\"text-center text-white\">Réveil "+id+"</h3>";
+  html+="    </div>";
+  html+="    <div class=\"card-body\">";
+  html+="      <div class=\"text-center mb-4 text-secondary \" id=\"blocAl\">";
+  html+="        <h1 class=\"display-3 \">--:--</h1>";
+  html+="        <h3>Alarme Inactive</h3>";
+  html+="      </div>";
 
 
-/*
-$("#Alarme").change(function() {
-     if ($("#REV").prop('checked'))  {
-    Options("REV");
-     }
-});
-*/
+  html+="     <form>";
+  html+="     <div class=\"form-row\">";
+  html+="       <div class=\"col-12\">";
+  html+="		    	<div class=\"col-6 col-sm-6 col-md-5 col-lg-4\"></div>";
+  html+="		    </div>";
+  html+="	  	<div class=\"col-6\">";
+
+  // saisie du titre
+  html+="			 <div class=\"form-group \"  id='reveilTitle'><br />";
+  html+="            <INPUT type='text' maxlength='20' placeholder=\"Nom de l'alarme\"";
+  html+="                      class=\"form-control text-primary\" aria-describedby=\"msghelp\" />";
+  html+="            <small id=\"msghelp\" class=\"form-text text-muted\">Titre limitée à 20 caractères.</small>";
+  html+="      </div>";
+// saisie de l'heure
+  html+="        <div class=\"input-group my-3 mx-auto\" id=\"Alarme\">";
+  html+="          <input type=\"time\" class=\"form-control text-primary\" value=\"07:00\" style=\"width:30px;\" />";
+  html+="        </div>";
+  html+="        </div>"; // fin div col-6
+
+  // partie audio
+ html+="	  	<div class=\"col-6\">";
+ html+="			  <div class=\"form-group d-non mt-2\" id=\"groupAUDIO\">";
+ html+="				<div class=\"custom-control custom-checkbox\">";
+ html+="				  <input type=\"checkbox\" class=\"custom-control-input reveilAudio\" id=\"reveilAudio"+id+"\">";
+ html+="				  <label class=\"custom-control-label text-primary\" for=\"reveilAudio"+id+"\">Notification AUDIO<small class=\"text-info\" id=\"infoTypeAudio\"></small></label>";
+ html+="				</div>";
+ html+="			  </div>";
+ html+="			  <div class=\"form-group d-none\" id=\"groupAUDIO1_"+id+"\">"; // pour le buzer
+ html+="				<select class=\"form-control buzaudio\" name='theme' id='selectTheme"+id+"'>";
+ html+="				</select>";
+ html+="			  </div>";
+ html+="			  <div class=\"mx-auto d-none\" id=\"groupAUDIO2_"+id+"\">"; // pour MP3
+ html+="				   <select class=\"form-control pistemp3\" name='pistemp3' id='pistemp3"+id+"'>";
+ html+="				  <input type=\"range\" id=\"volAUDIO"+id+"\" name=\"volume1\" min=\"0\" max=\"100\" value=\"40\" ";
+ html+="				        oninput=\"valVolume"+id+".value = volume1.valueAsNumber\">";
+ html+="				<output class=\"text-primary\" for=\"volAUDIO"+id+"\" name=\"valVolume"+id+"\"></output>";
+ html+="			  </div>";
+ html+="        </div>"; // fin div col-6
+
+  html+="        </div>"; // fin div form-row
+  html+="        </form>"; 
+
+  // jour de réveil
+  html+="      <div class=\"text-primary  text-center mx-auto\">";
+  html+="        <div class=\"form-check  form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday2\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday2\">Lun</label>";
+  html+="        </div>";
+  html+="        <div class=\"form-check form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday3\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday3\">Mar</label>";
+  html+="        </div>";
+  html+="        <div class=\"form-check form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday4\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday4\">Mer</label>";
+  html+="        </div>";
+  html+="        <div class=\"form-check form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday5\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday5\">Jeu</label>";
+  html+="        </div>";
+  html+="        <div class=\"form-check form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday6\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday6\">Ven</label>";
+  html+="        </div>";
+  html+="        <div class=\"form-check form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday7\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday7\">Sam</label>";
+  html+="        </div>";
+  html+="        <div class=\"form-check form-check-inline\">";
+  html+="          <input class=\"form-check-input alday\" type=\"checkbox\" id=\"alday1\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"alday1\">Dim</label>";
+  html+="        </div>";
+  html+="      </div> <br />";
+
+// url action
+html+="			 <div class=\"form-group \"  id='urlAction'><br />";
+html+="            <INPUT type='text' maxlength='20' placeholder=\"Url post Action\"";
+html+="                      class=\"form-control text-primary\" aria-describedby=\"msghelp\" />";
+html+="            <small id=\"msghelp\" class=\"form-text text-muted\">URL à déclancher lorsque l'alarme est désativée par l'utilisateur | Vide si pas d'action</small>";
+html+="      </div>";
+
+  // bouton action
+  html+="      <div class=\"form-group text-center\">";
+  html+="        <button type=\"button\" class=\"btn btn-outline-dark\" id=\"btn_stopAl"+id+"\"><i class=\"fas fa-power-off h3\"></i></button>";
+  html+="        <button type=\"button\" class=\"btn btn-outline-danger\" id=\"btn_upAl"+id+"\"><i class=\"fas fa-bell h3\"></i></button>";
+  html+="      </div>";
+
+  html+="      <ul class=\"text-left\">";
+   html+="        <li>URL ACTION : <span class=\"text-info\" id=\"IUAAL\">Aucune</span></li>";
+  html+="      </ul>";
+  html+="    </div>";
+  html+="  </div>";
+  html+="</div>";
+
+  return html;
+}
 
 function Minuteur(key) {
 if (key=="MIN") {
@@ -847,6 +991,7 @@ $('#notifAudio').change(function() {
  }
 });
 
+
 $('#type').change(function() {
   if ($(this).val()==6) $('#blocFx').removeClass("d-none");
   else {
@@ -894,10 +1039,21 @@ function checkGithub() {
 }
 
 $( document ).ready(function() {
+
+// création du HTML
+var visible=true;
+for(i=1;i<=nbAlarme;i++){
+  $('#liReveil').append(getHtmlLiAlarme(i, visible));
+  $('#myReveilTab').append(getHtmlAlarme(i, visible));
+  visible = false;
+}
+
 getInfo();
 getHisto();
 infoJson();
-update_Info()
+update_Info();
+
+// ajout des listener
 $('#LUM').on('change',Options);
 $('#SEC').on('change',Options);
 $('#HOR').on('change',Options);
@@ -908,8 +1064,9 @@ $('#BRI').on('change',Options);
 $('.alday').on('change',checkDay);
 $('#COLOR').on('change',Options);
 $('#DDHT').on('change',Options);
+$('.reveilAudio').on('change',revailAudio);;
 
-for (i=1;i<=5;i++) {
+for (i=1;i<=nbAlarme;i++) {
   $('#btn_upAl'+i).on('click',upAl);
   $('#btn_stopAl'+i).on('click',stopAl);
 }
@@ -919,13 +1076,19 @@ $('input[type="range"]').rangeslider({
 });
 //remplissage select
 $.each(buzMusic, function (value, text) {
-  $('#selectTheme').append($('<option>', {
+  $('.buzaudio').append($('<option>', {
           value: value+1,
           text : (value+1)+" - "+text
       }));
 });
 
-
+//remplissage select MP3
+$.each(pisteMP3, function (value, text) {
+  $('.pistemp3').append($('<option>', {
+          value: value+1,
+          text : (value+1)+" - "+text
+      }));
+});
 
 $.each(couleurs, function (value, text) {
 
