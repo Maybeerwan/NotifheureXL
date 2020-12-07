@@ -11,7 +11,7 @@ var mois = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","
 var typeAudio = ["Absent","HP / Buzzer","MP3Player","Autre"];
 var typeLed= ["Absent","LED Interne","Commande Relais","Neopixel Ring","Sortie Digitale"];
 var buzMusic=["Mission Impossible","Star Wars","Indiana Jones","Panthere Rose","Famille Adam's","l'exorciste","The simpsons","Tetris","Arkanoid","Super Mario","Xfiles","AxelF","PacMan","dambuste","Muppet show","James Bond","Take On Me","Agence tout risque","Top Gun","les Schtroumpfs","l'arnaque","looney Tunes","20 century fox","Le bon, la brute ...","Retour vers le futur"];
-var pisteMP3=["Piste 1", "piste2", "piste 3"];
+var pisteMP3=["Piste 1", "piste 2", "piste 3"];
 var ZXL=["Zone XL","Zone XL haut","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone notif 6"];
 var Z=["Zone Horloge","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone Notif 6","Zone Notif 7"];
 var fx=[ 'PRINT','SCROLL_LEFT','SCROLL_UP_LEFT','SCROLL_DOWN_LEFT','SCROLL_UP','GROW_UP','SCAN_HORIZ','BLINDS','WIPE','SCAN_VERTX','SLICE','FADE','OPENING_CURSOR','NO_EFFECT','SPRITE','CLOSING','SCAN_VERT','WIPE_CURSOR','SCAN_HORIZX','DISSOLVE','MESH','OPENING','CLOSING_CURSOR','GROW_DOWN','SCROLL_DOWN','SCROLL_DOWN_RIGHT','SCROLL_UP_RIGHT','SCROLL_RIGHT','RANDOM'];
@@ -27,7 +27,7 @@ var ajaxload=false;
 var ver;
 var pause;
 var color;
-var nbAlarme=6;
+var nbAlarme;
 
 function IsJsonString(str) {
 try {
@@ -125,24 +125,24 @@ $.ajax({
          $('#MZM').text(MZM);
          $('#TZ').text(TZ);
          if (MZM>0) {
-        $("#groupZone").removeClass("d-none");
-         if (XL)  Zones=ZXL;
-         else Zones=Z;
-         numero="<ul class='list-group list-group-flush'>";
-         //remplissage select
-         for (i=0;i<=(XL?MZM+1:MZM);i++) {
-           if ((!XL) || (XL && i!=1)) {
-           $('#selectZone').append($('<option>', {
-                   value: ZP[i],
-                   text : Zones[i]
-               }));
-         }
-         numero=numero+"<li class='list-group-item d-flex justify-content-between align-items-center'>"+Zones[i]+"  <span class='badge badge-info badge-pill'>"+ZP[i]+"</span></li>";
-       }
-       numero=numero+"</ul>";
-       $("#selectZone option:contains(Zone Message)").attr("selected", "selected");
-       $("#num").html(numero);
-     } else $("#num").text("Zone Horloge et Msg unique");
+            $("#groupZone").removeClass("d-none");
+            if (XL)  Zones=ZXL;
+            else Zones=Z;
+            numero="<ul class='list-group list-group-flush'>";
+            //remplissage select
+            for (i=0;i<=(XL?MZM+1:MZM);i++) {
+              if ((!XL) || (XL && i!=1)) {
+              $('#selectZone').append($('<option>', {
+                      value: ZP[i],
+                      text : Zones[i]
+                  }));
+            }
+            numero=numero+"<li class='list-group-item d-flex justify-content-between align-items-center'>"+Zones[i]+"  <span class='badge badge-info badge-pill'>"+ZP[i]+"</span></li>";
+            }
+            numero=numero+"</ul>";
+            $("#selectZone option:contains(Zone Message)").attr("selected", "selected");
+            $("#num").html(numero);
+         } else $("#num").text("Zone Horloge et Msg unique");
          $("#INT").val(jinfo.INTENSITY);
          $("#MINUT").val(jinfo.CRTIME);
          $("#groupLum output").val(jinfo.INTENSITY);
@@ -392,6 +392,79 @@ $.ajax({
  } // fin complete
 
  }); //fin ajax
+}
+
+function getAlarmes() {
+  // var data="{\"NbAlarmes\":1,\"alarmes\":[{\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"PISTEMP3\":2,\"callback\":\"https://monardesseafaire/\",\"audio\":true}]}";
+  // var json = JSON.parse(data);
+
+  $.getJSON( "/configAlarme?info", function( json ,status) {
+    console.log(json);
+    nbAlarme = json.NbAlarmes; 
+    console.log(nbAlarme);
+    // création du HTML
+    var visible=true;
+    for(i=1;i<=nbAlarme;i++){
+      $('#liReveil').append(getHtmlLiAlarme(i, visible));
+      $('#myReveilTab').append(getHtmlAlarme(i, visible));
+      visible = false;
+    }
+    reveilhtmlAudio();
+
+    // remplissage des options
+      //remplissage select
+  $.each(buzMusic, function (value, text) {
+    $('.buzaudio').append($('<option>', {
+            value: value+1,
+            text : (value+1)+" - "+text
+        }));
+  });
+
+  //remplissage select MP3
+  $.each(pisteMP3, function (value, text) {
+    $('.pistemp3').append($('<option>', {
+            value: value+1,
+            text : (value+1)+" - "+text
+        }));
+  });
+
+    // remplissage des alarmes
+    $.each(json.alarmes,function( key, val ) {
+      console.log("key : " + key + ":" + val.NOM );
+      id = key + 1;
+
+      if(val.ACTIF) {
+        $("#reveil"+id+" #blocAl").addClass("text-danger");
+        $("#reveil"+id+" #blocAl").removeClass("text-secondary");
+        $("#reveil"+id+" #blocAl h3").text("Alarme Active");
+      } else {
+        $("#reveil"+id+" #blocAl").addClass("text-secondary");
+        $("#reveil"+id+" #blocAl").removeClass("text-danger");
+        $("#reveil"+id+" #blocAl h3").text("Alarme Inactive");
+      }
+      $("#reveil"+id+" #Alarme input").val(val.HEURE+":"+val.MINUTE);
+      $("#reveil"+id+" #blocAl h1").text(val.HEURE+":"+val.MINUTE);
+      $("#reveil"+id+" #titre h3").text(val.NOM);
+      $("#reveil"+id+" #reveilTitle input").val(val.NOM);
+      $('#reveilAudio'+id).prop('checked',val.audio);
+      $('#infoTypeAudio'+id).text(" ("+typeAudio[tA]+")");
+      
+      if(val.audio) {
+        if (tA==1) {
+          $('#groupAUDIO1_'+id).removeClass("d-none");
+          $("#selectTheme"+id).val(val.FXSOUNDAL);
+        }
+        else if (tA==2) {
+          $('#groupAUDIO2_'+id).removeClass("d-none");
+        
+          $('#volAUDIO'+id).val(val.VOLUMEAUDIO); 
+          valueOutput(document.getElementById('volAUDIO'+id));
+          $("#pistemp3"+id).val(val.PISTEMP3);
+        }
+    }
+      $("#reveil"+id+" #urlAction input").val(val.callback);
+  });
+ });
 }
 
 function getHisto() {
@@ -692,7 +765,7 @@ if (res[0]=="INT") {
 function Alarmes(id, cle = "" , valeur = "") {
 
   key = ((typeof cle != 'object') ? cle : key=$(this).attr('id'));
-  console.log ( "Alarmes : valeur de key :"+$(this).attr('id')+" et type cle "+typeof cle);
+  // console.log ( "Alarmes : valeur de key :"+$(this).attr('id')+" et type cle "+typeof cle);
   additional = "";
  
   if (key=="ACTIF") 
@@ -706,7 +779,8 @@ function Alarmes(id, cle = "" , valeur = "") {
       if(nom!="") additional+= "&nom="+nom;
       
       if ($('#reveilAudio'+id).prop('checked')) {
-        console.log("alarme sonore");
+        // console.log("alarme sonore");
+        additional += "&audio=true";
         if (tA==1) {
           additional+="&FXSOUNDAL="+$("#selectTheme"+id+" option:selected").val();
         }
@@ -715,12 +789,18 @@ function Alarmes(id, cle = "" , valeur = "") {
           additional+="&PISTEMP3="+$("#pistemp3"+id+" option:selected").val();
         }
       }
+      else {
+        additional += "&audio=false";
+      }
+
+      var urlAction = $("#reveil"+id+" #urlAction input").val();
+      additional += "&callback="+urlAction;
     }
   }
   else if (key=="ALD") val=valeur;
   else val=$(this).prop('checked');
   
-  console.log ("Envoie des valeur "+key+" et "+val + " pour l'alarme d'id "+id+ " " + additional);
+  console.log ("Envoie des valeur "+key+"="+val + " pour l'alarme d'id "+id+ " " + additional);
   url="/configAlarme?ID="+(id-1)+"&"+key+"="+val+additional; 
   $.get(url, function( data ) {
   var res = data.split(":");
@@ -729,7 +809,6 @@ function Alarmes(id, cle = "" , valeur = "") {
     $('#INT').val(res[1]);
     $('#INT').rangeslider('update', true);
     }
-  
   });
   }
 
@@ -750,8 +829,6 @@ function Alarmes(id, cle = "" , valeur = "") {
   function revailAudio(e){
     var boutonid = e.target.id || e.target.parentNode.id
     var id = boutonid.substring("reveilAudio".length);
-      console.log("toto : " + id); // DOTO
-      tA=2;
      if ($(this).prop('checked'))  {
       if (tA==1 ) {
           $('#groupAUDIO1_'+id).removeClass("d-none");
@@ -798,6 +875,21 @@ function Alarmes(id, cle = "" , valeur = "") {
     Alarmes(id, "ACTIF", "False");
   }
 
+function reveilhtmlAudio(){
+  for(var i=1;i<=nbAlarme;i++)
+  {
+      if (tA > 0)  {
+        $('#groupAUDIO_'+i).removeClass('d-none');
+        // $('#groupAUDIO'+tA+'_'+i).removeClass('d-none');
+        $('#infoTypeAudio').text(" ("+typeAudio[tA]+")");
+
+    } else {
+      $('#groupAUDIO_'+i).addClass('d-none');
+      // $('#groupAUDIO'+tA+'_'+i).addClass('d-none');
+    }
+}
+}
+
 function getHtmlLiAlarme(id, visible)
 {
   var html = "<li class=\"nav-item\"><a class=\"nav-link show"+ (visible?" active bg":"")+"\" data-toggle=\"tab\" href=\"#reveil"+id+"\">Réveil "+id+"</a></li>";
@@ -832,9 +924,9 @@ function getHtmlAlarme(id,visible){
 
   // saisie du titre
   html+="			 <div class=\"form-group \"  id='reveilTitle'><br />";
-  html+="            <INPUT type='text' maxlength='20' placeholder=\"Nom de l'alarme\"";
+  html+="            <INPUT type='text' maxlength='50' placeholder=\"Nom de l'alarme\"";
   html+="                      class=\"form-control text-primary\" aria-describedby=\"msghelp\" />";
-  html+="            <small id=\"msghelp\" class=\"form-text text-muted\">Titre limitée à 20 caractères.</small>";
+  html+="            <small id=\"msghelp\" class=\"form-text text-muted\">Titre limitée à 50 caractères.</small>";
   html+="      </div>";
 // saisie de l'heure
   html+="        <div class=\"input-group my-3 mx-auto\" id=\"Alarme\">";
@@ -844,10 +936,10 @@ function getHtmlAlarme(id,visible){
 
   // partie audio
  html+="	  	<div class=\"col-6\">";
- html+="			  <div class=\"form-group d-non mt-2\" id=\"groupAUDIO\">";
+ html+="			  <div class=\"form-group d-none mt-2\" id=\"groupAUDIO_"+id+"\">";
  html+="				<div class=\"custom-control custom-checkbox\">";
  html+="				  <input type=\"checkbox\" class=\"custom-control-input reveilAudio\" id=\"reveilAudio"+id+"\">";
- html+="				  <label class=\"custom-control-label text-primary\" for=\"reveilAudio"+id+"\">Notification AUDIO<small class=\"text-info\" id=\"infoTypeAudio\"></small></label>";
+ html+="				  <label class=\"custom-control-label text-primary\" for=\"reveilAudio"+id+"\">Notification AUDIO<small class=\"text-info\" id=\"infoTypeAudio"+id+"\"></small></label>";
  html+="				</div>";
  html+="			  </div>";
  html+="			  <div class=\"form-group d-none\" id=\"groupAUDIO1_"+id+"\">"; // pour le buzer
@@ -855,7 +947,7 @@ function getHtmlAlarme(id,visible){
  html+="				</select>";
  html+="			  </div>";
  html+="			  <div class=\"mx-auto d-none\" id=\"groupAUDIO2_"+id+"\">"; // pour MP3
- html+="				   <select class=\"form-control pistemp3\" name='pistemp3' id='pistemp3"+id+"'>";
+ html+="				   <select class=\"form-control pistemp3\" name='pistemp3' id='pistemp3"+id+"'><br />";
  html+="				  <input type=\"range\" id=\"volAUDIO"+id+"\" name=\"volume1\" min=\"0\" max=\"100\" value=\"40\" ";
  html+="				        oninput=\"valVolume"+id+".value = volume1.valueAsNumber\">";
  html+="				<output class=\"text-primary\" for=\"volAUDIO"+id+"\" name=\"valVolume"+id+"\"></output>";
@@ -899,20 +991,16 @@ function getHtmlAlarme(id,visible){
 
 // url action
 html+="			 <div class=\"form-group \"  id='urlAction'><br />";
-html+="            <INPUT type='text' maxlength='20' placeholder=\"Url post Action\"";
+html+="            <INPUT type='text' maxlength='80' id='urlAction"+id+"' placeholder=\"Url post Action\"";
 html+="                      class=\"form-control text-primary\" aria-describedby=\"msghelp\" />";
 html+="            <small id=\"msghelp\" class=\"form-text text-muted\">URL à déclancher lorsque l'alarme est désativée par l'utilisateur | Vide si pas d'action</small>";
 html+="      </div>";
 
-  // bouton action
+
   html+="      <div class=\"form-group text-center\">";
   html+="        <button type=\"button\" class=\"btn btn-outline-dark\" id=\"btn_stopAl"+id+"\"><i class=\"fas fa-power-off h3\"></i></button>";
   html+="        <button type=\"button\" class=\"btn btn-outline-danger\" id=\"btn_upAl"+id+"\"><i class=\"fas fa-bell h3\"></i></button>";
   html+="      </div>";
-
-  html+="      <ul class=\"text-left\">";
-   html+="        <li>URL ACTION : <span class=\"text-info\" id=\"IUAAL\">Aucune</span></li>";
-  html+="      </ul>";
   html+="    </div>";
   html+="  </div>";
   html+="</div>";
@@ -1040,98 +1128,93 @@ function checkGithub() {
 
 $( document ).ready(function() {
 
-// création du HTML
-var visible=true;
-for(i=1;i<=nbAlarme;i++){
-  $('#liReveil').append(getHtmlLiAlarme(i, visible));
-  $('#myReveilTab').append(getHtmlAlarme(i, visible));
-  visible = false;
-}
+  getInfo();
 
-getInfo();
-getHisto();
-infoJson();
-update_Info();
+  getAlarmes();
 
-// ajout des listener
-$('#LUM').on('change',Options);
-$('#SEC').on('change',Options);
-$('#HOR').on('change',Options);
-$('#INT').on('change',Options);
-$('#REV').on('change',Options);
-$('#LED').on('change',Options);
-$('#BRI').on('change',Options);
-$('.alday').on('change',checkDay);
-$('#COLOR').on('change',Options);
-$('#DDHT').on('change',Options);
-$('.reveilAudio').on('change',revailAudio);;
+  getHisto();
+  infoJson();
+  update_Info();
 
-for (i=1;i<=nbAlarme;i++) {
-  $('#btn_upAl'+i).on('click',upAl);
-  $('#btn_stopAl'+i).on('click',stopAl);
-}
+  // ajout des listener
+  $('#LUM').on('change',Options);
+  $('#SEC').on('change',Options);
+  $('#HOR').on('change',Options);
+  $('#INT').on('change',Options);
+  $('#REV').on('change',Options);
+  $('#LED').on('change',Options);
+  $('#BRI').on('change',Options);
+  $('.alday').on('change',checkDay);
+  $('#COLOR').on('change',Options);
+  $('#DDHT').on('change',Options);
+  $('.reveilAudio').on('change',revailAudio);;
 
-$('input[type="range"]').rangeslider({
- polyfill: false
-});
-//remplissage select
-$.each(buzMusic, function (value, text) {
-  $('.buzaudio').append($('<option>', {
-          value: value+1,
-          text : (value+1)+" - "+text
-      }));
-});
-
-//remplissage select MP3
-$.each(pisteMP3, function (value, text) {
-  $('.pistemp3').append($('<option>', {
-          value: value+1,
-          text : (value+1)+" - "+text
-      }));
-});
-
-$.each(couleurs, function (value, text) {
-
-  $('#COLOR').append($('<option>', {
-          value: value,
-          text : text
-      }));
-});
-
-
-$.each(fx, function (value, text) {
-  if (value<13 || value>14) {  //no sprite  no effect
-  $('#FX').append($('<option>', {
-          value: value,
-          text : value+" - "+text
-      }));
+  for (i=1;i<=nbAlarme;i++) {
+    $('#btn_upAl'+i).on('click',upAl);
+    $('#btn_stopAl'+i).on('click',stopAl);
   }
-});
 
-$.each(animation, function (value, text) {
-  $('#Anim').append($('<option>', {
-          value: value,
-          text : value+" - "+text
-      }));
+  $('input[type="range"]').rangeslider({
+  polyfill: false
+  });
+  //remplissage select
+  $.each(buzMusic, function (value, text) {
+    $('.buzaudio').append($('<option>', {
+            value: value+1,
+            text : (value+1)+" - "+text
+        }));
+  });
 
-});
-/*
-$('#Alarme').datetimepicker({
-                    locale: 'fr',
-                    format: 'HH:mm',
-                    inline: false,
-                    widgetPositioning:{
-                      horizontal: 'left',
-                      vertical: 'bottom'
-                                  }
+  //remplissage select MP3
+  $.each(pisteMP3, function (value, text) {
+    $('.pistemp3').append($('<option>', {
+            value: value+1,
+            text : (value+1)+" - "+text
+        }));
+  });
 
-});
-*/
-$(document).on('input', 'input[type="range"]', function(e) {
-        valueOutput(e.target);
-    });
+  $.each(couleurs, function (value, text) {
 
-//requete test version notifheure XL
+    $('#COLOR').append($('<option>', {
+            value: value,
+            text : text
+        }));
+  });
+
+
+  $.each(fx, function (value, text) {
+    if (value<13 || value>14) {  //no sprite  no effect
+    $('#FX').append($('<option>', {
+            value: value,
+            text : value+" - "+text
+        }));
+    }
+  });
+
+  $.each(animation, function (value, text) {
+    $('#Anim').append($('<option>', {
+            value: value,
+            text : value+" - "+text
+        }));
+
+  });
+  /*
+  $('#Alarme').datetimepicker({
+                      locale: 'fr',
+                      format: 'HH:mm',
+                      inline: false,
+                      widgetPositioning:{
+                        horizontal: 'left',
+                        vertical: 'bottom'
+                                    }
+
+  });
+  */
+  $(document).on('input', 'input[type="range"]', function(e) {
+          valueOutput(e.target);
+      });
+
+  //requete test version notifheure XL
 
 
 }); // fin fonction document
