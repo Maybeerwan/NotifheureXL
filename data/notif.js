@@ -395,7 +395,10 @@ $.ajax({
 }
 
 function getAlarmes() {
-  // var data="{\"NbAlarmes\":1,\"alarmes\":[{\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"PISTEMP3\":2,\"callback\":\"https://monardesseafaire/\",\"audio\":true}]}";
+  // tA = 2;
+  // var data="{\"NbAlarmes\":1,\"alarmes\":[\
+  //   {\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"PISTEMP3\":2,\"callback\":\"https://monardesseafaire/\",\
+  //   \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true}]}";
   // var json = JSON.parse(data);
 
   $.getJSON( "/configAlarme?info", function( json ,status) {
@@ -413,20 +416,20 @@ function getAlarmes() {
 
     // remplissage des options
       //remplissage select
-  $.each(buzMusic, function (value, text) {
-    $('.buzaudio').append($('<option>', {
-            value: value+1,
-            text : (value+1)+" - "+text
-        }));
-  });
+    $.each(buzMusic, function (value, text) {
+      $('.buzaudio').append($('<option>', {
+              value: value+1,
+              text : (value+1)+" - "+text
+          }));
+    });
 
-  //remplissage select MP3
-  $.each(pisteMP3, function (value, text) {
-    $('.pistemp3').append($('<option>', {
-            value: value+1,
-            text : (value+1)+" - "+text
-        }));
-  });
+    //remplissage select MP3
+    $.each(pisteMP3, function (value, text) {
+      $('.pistemp3').append($('<option>', {
+              value: value+1,
+              text : (value+1)+" - "+text
+          }));
+    });
 
     // remplissage des alarmes
     $.each(json.alarmes,function( key, val ) {
@@ -461,9 +464,14 @@ function getAlarmes() {
           valueOutput(document.getElementById('volAUDIO'+id));
           $("#pistemp3"+id).val(val.PISTEMP3);
         }
-    }
-      $("#reveil"+id+" #urlAction input").val(val.callback);
-  });
+      }
+      $("#reveil"+id+" #urlAction input").val(val.callback);   
+      
+      // jour
+      for (i=0;i<7;i++) {
+        $("#reveil"+id+" #alday"+(i+1)).prop('checked',val.ALDAY[i]);
+      }
+    });
  });
 }
 
@@ -800,15 +808,10 @@ function Alarmes(id, cle = "" , valeur = "") {
   else if (key=="ALD") val=valeur;
   else val=$(this).prop('checked');
   
-  console.log ("Envoie des valeur "+key+"="+val + " pour l'alarme d'id "+id+ " " + additional);
+  // console.log ("Envoie des valeur "+key+"="+val + " pour l'alarme d'id "+id+ " " + additional);
   url="/configAlarme?ID="+(id-1)+"&"+key+"="+val+additional; 
   $.get(url, function( data ) {
-  var res = data.split(":");
-  console.log("retour serveur : "+data);
-  if (res[0]=="INT") {
-    $('#INT').val(res[1]);
-    $('#INT').rangeslider('update', true);
-    }
+    console.log("retour serveur : "+data);
   });
   }
 
@@ -1037,7 +1040,7 @@ else $('#CR').text('Afficher');
 }
 
 function majMinut() {
-console.log("maj minut");
+// console.log("maj minut");
 valueOutput(document.getElementById('MINUT'));
 $('#MINUT').rangeslider('update', true);
 }
