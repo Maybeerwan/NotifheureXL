@@ -833,13 +833,13 @@ struct sAlarme {
   byte heure;				// Heure
   byte minute;
   bool alDay[7];              // jour alarme
-  char msgAlarme[80];         // Message a affiché pour alarme
+  char callback[80];         // URL appelée lorsque l'alarme est éteinte // TODO
   byte fxAL;                  // fx Alarme pour led
-  int fxSoundAL;             // fx Sound Alarme par defaut
-  byte action;             // Action pour minuteur / alarme
-  int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
-  int pisteMP3;
+  byte fxSoundAL;             // fx Sound Alarme par defaut si tA = 1 ???
+  int volumeAudio; 			// Volume audio si tA == 2 
+  int pisteMP3;         // piste MP3 si tA == 2 
   bool led;
+  bool audio;       // définit si l'audio est ectivé
 };
 
 sAlarme Alarmes[NB_ALARMES];  // Nombre d'alarmes
@@ -1066,13 +1066,13 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
     alarmes[i].alDay[6] = objAlarmes["ALDAY"][6] | false;
     // alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
 	
-	strlcpy(alarmes[i].msgAlarme,objAlarmes["msgAlarme"], sizeof(alarmes[i].msgAlarme));
+	strlcpy(alarmes[i].callback,objAlarmes["callback"], sizeof(alarmes[i].callback));
 	alarmes[i].fxAL = objAlarmes["fxAL"] |0;         
 	alarmes[i].fxSoundAL = objAlarmes["fxSoundAL"] |0;    
-	alarmes[i].action = objAlarmes["action"] |0;     
 	alarmes[i].volumeAudio = objAlarmes["volumeAudio"] |0;	
 	alarmes[i].pisteMP3 = objAlarmes["pisteMP3"] |0;
 	alarmes[i].led = objAlarmes["led"] | false;
+  alarmes[i].audio = objAlarmes["audio"] | false;
 	}
 
 	file.close();
@@ -1110,13 +1110,13 @@ String createAlarmeJson(sAlarme  *alarmes) {
       aday.add(alarmes[i].alDay[6]);
       // aday.add(alarmes[i].alDay[7]);   
     
-    objAlarmes["msgAlarme"] = alarmes[i].msgAlarme;
+    objAlarmes["callback"] = alarmes[i].callback;
     objAlarmes["fxAL"] = alarmes[i].fxAL;         
     objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
-    objAlarmes["action"] = alarmes[i].action;     
     objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
     objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
     objAlarmes["led"] = alarmes[i].led;
+    objAlarmes["audio"] = alarmes[i].audio;    
 
 }
   // envoie alarmes json
@@ -1937,7 +1937,6 @@ void alarme(sAlarme &alarme) {
 
   displayNotif(alarme.msgAlarme,zoneTime);
   if (configSys.box) BoutonAction(10 , configSys.action[1] ); // TODO c'est quoi ???
-
 }
 
 void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
@@ -2794,14 +2793,15 @@ void handleAlarme() {
     if(!optionsBool(&(Alarmes[i].alDay[5]), docAlarme["ALDAY5"])) { Alarmes[i].alDay[5]=false;}
     if(!optionsBool(&(Alarmes[i].alDay[6]), docAlarme["ALDAY6"])) { Alarmes[i].alDay[6]=false;}
 
-    strlcpy(Alarmes[i].msgAlarme,docAlarme["MSGALARME"], sizeof(Alarmes[i].msgAlarme));
+    strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
     
-    optionsNum(&Alarmes[i].fxAL, docAlarme["fxAL"],0,5);        
+    optionsNum(&Alarmes[i].fxAL, docAlarme["FXAL"],0,5);        
     optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
     // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
     optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,100);	
     optionsNum(&Alarmes[i].pisteMP3, docAlarme["PISTEMP3"],0,totalMP3);
-    if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].alDay[6]=false;}
+    if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].led=false;}
+    if(!optionsBool(&Alarmes[i].audio, docAlarme["AUDIO"])) { Alarmes[i].audio=false;}
     Serial.println("configAlarme : mise à jour de l'alarme terminee");
 	}
 
