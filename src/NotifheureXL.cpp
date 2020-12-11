@@ -523,11 +523,11 @@ const struct snotifLed chaseColor={7,100,White,50,1};
 snotifLed FX_led[]={nofxled,on,flash,breath,rainbow,colorWipe,colorWipeFill,chaseColor};
 
 struct snotifAudio {
-  int fx;
-  int piste;
-  byte volume;
+  int fx; // effet pour buzzer
+  int piste; // numéro de piste
+  byte volume; // Volume audio
   byte nzo;
-  bool state;
+  bool state; // etat ? son buzzer en cours
 };
 struct snotifAudio notifAudio;
 //const struct snotifAudio audioBuz={};
@@ -835,7 +835,7 @@ struct sAlarme {
   bool alDay[7];              // jour alarme
   char msgAlarme[80];         // Message a affiché pour alarme
   byte fxAL;                  // fx Alarme pour led
-  byte fxSoundAL;             // fx Sound Alarme par defaut
+  int fxSoundAL;             // fx Sound Alarme par defaut
   byte action;             // Action pour minuteur / alarme
   int volumeAudio; 			// TODO : à voir si à remplacer par snotifAudio ?
   int pisteMP3;
@@ -1160,18 +1160,21 @@ switch (hardConfig.typeAudio) {
       {
        mySoftwareSerial.begin(9600);
        int vol;
-        if (action=='P') {
+        if (action=='P' && !notifAudio.state) {
+          notifAudio.state=true;
           vol=floor(notifAudio.volume*30/100);
-          Serial.println("Morceau : "+String(configSys.MP3Notif)+"  volume :"+String(vol));
+          vol=constrain(vol,0,30);
+          Serial.println("Morceau : "+String(notifAudio.piste)+"  volume :"+String(vol));
 
           //myDFPlayer.begin(mySoftwareSerial);
 
           myDFPlayer.volume(vol);
-          myDFPlayer.playFolder(1,configSys.MP3Notif);
+          myDFPlayer.play(notifAudio.piste);
           //myDFPlayer.playMp3Folder(2);
           //myDFPlayer.advertise(configSys.MP3Notif);
         }
         else if (action=='S') {
+          notifAudio.state=false;
           myDFPlayer.pause();
         }
       }  // fin 2
@@ -1787,7 +1790,7 @@ uint8_t  lumAuto() {
     if (_photocell) {
     sv=readPhotocell();
     if (configSys.DEBUG) Serial.println("valeur brut "+String(sv));
-    lum= map(sv, 0,1023 , 0, 15);
+    lum= map(sv, 0,1023 , 15, 0);
     }
   else lum=configSys.intensity;
   if (configSys.DEBUG) Serial.println("valeur lum: "+String(lum));
@@ -1924,9 +1927,16 @@ void alarme(sAlarme &alarme) {
   Serial.println("Mode alarme");
   //LuN=configSys.intensity;
   notifLed=FX_led[alarme.fxAL];
-  notifAudio.fx=alarme.fxSoundAL;
+  // notifAudio.fx=alarme.fxSoundAL;
+  // notifAudio={alarme.fxSoundAL,alarme.pisteMP3,alarme.volumeAudio,zoneMsg,false};
+  notifAudio.fx=alarme.fxSoundAL; 
+  notifAudio.piste=alarme.pisteMP3; 
+  notifAudio.volume=alarme.volumeAudio; 
+  notifAudio.nzo=zoneMsg;
+  notifAudio.state=false; 
+
   displayNotif(alarme.msgAlarme,zoneTime);
-  if (configSys.box) BoutonAction(10 , configSys.action[1] );
+  if (configSys.box) BoutonAction(10 , configSys.action[1] ); // TODO c'est quoi ???
 
 }
 
@@ -2789,7 +2799,7 @@ void handleAlarme() {
     optionsNum(&Alarmes[i].fxAL, docAlarme["fxAL"],0,5);        
     optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
     // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
-    optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,30);	
+    optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,100);	
     optionsNum(&Alarmes[i].pisteMP3, docAlarme["PISTEMP3"],0,totalMP3);
     if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].alDay[6]=false;}
     Serial.println("configAlarme : mise à jour de l'alarme terminee");
@@ -3266,6 +3276,13 @@ String getPage() {
   return page;
 }
 
+void finNotif() {
+  if (AUDIONOTIF) {
+    audio('S');
+    Serial.println("fin music");
+  }
+  cmdLED(configSys.LED);
+}
 
 // ****************************
  /******************************
@@ -3355,6 +3372,7 @@ if (configSys.broker) {
  server.on("/Options",handleOptions); //page gestion Options
  server.on("/getInfo",handleGetInfo); //page gestion Options
  server.on("/configAlarme",handleAlarme); // configAlarme
+ server.on("/finAlarme", finNotif); // arret de l'alarme en cours
  // Gestion securisé page config
  server.on("/setup.html", []() {
       if (!server.authenticate(www_username, www_password)) {
@@ -3641,15 +3659,6 @@ displayNotif(infoSys);
 GetTemp();
 }
 //********* Fin SETUP
-
-
-void finNotif() {
-  if (AUDIONOTIF) {
-    audio('S');
-    Serial.println("fin music");
-  }
-  cmdLED(configSys.LED);
-}
 
 void loop() {
   static bool XLZoneTest=true;
