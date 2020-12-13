@@ -141,8 +141,8 @@ const char* www_password = "notif";
 //************************************************
 #define LED_OUT 0  // 0 aucune , 1 Led interne , 2 relais ,3 Ring neopixel ,4 Digital output
 #define AUDIO_OUT 0 // 0 aucun , 1 buzzer , 2 MP3player , 3 autres ( sortie relais ou digital)
-#define BOUTON1 false
-#define BOUTON2 false
+#define BOUTON1 true
+#define BOUTON2 true
 // ********** DHT ***************
 // Detection auto si presence DHT
 // ne pas modifier , sauf si Auto ne fonctionne pas
@@ -316,7 +316,6 @@ struct sConfigSys {
   char hflag[10];              // flag autorisé pour historique
   int CrTime;
   byte fxCR;                  // fx minuteur par defaut
-  // TODO EPN
   byte fxAL;                  // fx Alarme par defaut
   byte fxSoundCR;             // fx Sound Minuteur par defaut
   byte fxSoundAL;             // fx Sound Alarme par defaut
@@ -527,7 +526,8 @@ struct snotifAudio {
   int piste; // numéro de piste
   byte volume; // Volume audio
   byte nzo;
-  bool state; // etat ? son buzzer en cours
+  bool state; // etat ? son en cours
+  bool active; // si audio activé
 };
 struct snotifAudio notifAudio;
 //const struct snotifAudio audioBuz={};
@@ -827,7 +827,8 @@ sprite[] =
 const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES* (JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12)) + 1;
 const size_t capacityAlarme = JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12) + 1;
 
-struct sAlarme {				
+struct sAlarme {			
+  // byte id;        // id de alarme	
   char nom[50];   // nom de l'alarme
   bool actif;				// Actif
   byte heure;				// Heure
@@ -839,7 +840,7 @@ struct sAlarme {
   int volumeAudio; 			// Volume audio si tA == 2 
   int pisteMP3;         // piste MP3 si tA == 2 
   bool led;
-  bool audio;       // définit si l'audio est ectivé
+  bool audio;       // définit si l'audio est activé
 };
 
 sAlarme Alarmes[NB_ALARMES];  // Nombre d'alarmes
@@ -1052,6 +1053,7 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
 	JsonObject objAlarmes = jsonAlarmes[i];
 	
 	// parametre
+  // alarmes[i].id = objAlarmes["id"] | i;
   strlcpy(alarmes[i].nom,objAlarmes["nom"], sizeof(alarmes[i].nom));
 	alarmes[i].actif = objAlarmes["actif"] | false;		
 	alarmes[i].heure = objAlarmes["heure"] | 0;
@@ -1095,6 +1097,7 @@ String createAlarmeJson(sAlarme  *alarmes) {
     JsonObject objAlarmes = docAlarmes.createNestedObject();
 
     // parametre
+    // objAlarmes["id"] = alarmes[i].id;
     objAlarmes["nom"] = alarmes[i].nom;
     objAlarmes["actif"] = alarmes[i].actif;		
     objAlarmes["heure"] = alarmes[i].heure;
@@ -1400,7 +1403,7 @@ void displayNotif(String Msg,uint8_t NZO=zoneMsg,byte type=0,textPosition_t pos=
 
   //if (configSys.typeLED>0 && notifLED>0) fxLED(1,notifLED);
   if (hardConfig.typeLED>0 && notifLed.fx>0 ) {nzofx=NZO;fxLED(notifLed.color);}
-  if (hardConfig.typeAudio>0 && notifAudio.fx>0 ) {
+  if (hardConfig.typeAudio>0 && (notifAudio.fx>0 || notifAudio.active) ) {
       notifAudio.nzo=NZO;
       audio();
       delay(500);
@@ -1839,6 +1842,14 @@ void displayHisto() {
   else iH++;
 }
 
+void finNotif() {
+  if (AUDIONOTIF) {
+    audio('S');
+    Serial.println("fin music");
+  }
+  cmdLED(configSys.LED);
+}
+
 void BoutonAction(byte btn , byte btnclic ) {
 int actionClick=0;
 int m=0;
@@ -1901,6 +1912,9 @@ switch (actionClick) {
       case 10 : //URL Action 1
                 ToBox(configSys.URL_Action3,3);
       break;
+      case 11 : // eteindre alarmes
+              finNotif();
+      break; 
     default:
 
       break;
@@ -1934,17 +1948,19 @@ void alarme(sAlarme &alarme) {
   notifAudio.volume=alarme.volumeAudio; 
   notifAudio.nzo=zoneMsg;
   notifAudio.state=false; 
+  notifAudio.active=alarme.audio;
 
-  displayNotif(alarme.msgAlarme,zoneTime);
+  displayNotif(alarme.nom,zoneTime);
+
   if (configSys.box) BoutonAction(10 , configSys.action[1] ); // TODO c'est quoi ???
 }
 
 void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
 {
-  // Serial.println("Vérification des alarmes j" + day);
+  // Serial.println("Vérification des alarmes j:" + String(day));
   for(int i=0; i<NB_ALARMES; i++)
   {
-    if(Alarmes[i].alDay[day])
+    if(Alarmes[i].actif && Alarmes[i].alDay[day])
     {
       if(hour == Alarmes[i].heure && minute==Alarmes[i].minute)
       {  
@@ -2777,31 +2793,29 @@ void handleAlarme() {
   Serial.println("configAlarme : mise à jour de l'alarme " + i);
   // si argument avec identifiant alors on mets à jour
   if(i>-1 && i< NB_ALARMES) {
-    
-    // parametre 
-    strlcpy(Alarmes[i].nom,docAlarme["NOM"], sizeof(Alarmes[i].nom));
     if(!optionsBool(&Alarmes[i].actif, docAlarme["ACTIF"])) { Alarmes[i].actif=false;}		// optionsNum(&configSys.color,value,0,7)
-    optionsNum(&Alarmes[i].heure, docAlarme["HEURE"],0,23);
-    optionsNum(&Alarmes[i].minute, docAlarme["MINUTE"],0,59);
-    // alarme jours
-    // optionsSplit(Alarmes[i].alDay,docAlarme["ALDAY"]+":",':')
-    if(!optionsBool(&(Alarmes[i].alDay[0]), docAlarme["ALDAY0"])) { Alarmes[i].alDay[0]=false;}
-    if(!optionsBool(&(Alarmes[i].alDay[1]), docAlarme["ALDAY1"])) { Alarmes[i].alDay[1]=false;}
-    if(!optionsBool(&(Alarmes[i].alDay[2]), docAlarme["ALDAY2"])) { Alarmes[i].alDay[2]=false;}
-    if(!optionsBool(&(Alarmes[i].alDay[3]), docAlarme["ALDAY3"])) { Alarmes[i].alDay[3]=false;}
-    if(!optionsBool(&(Alarmes[i].alDay[4]), docAlarme["ALDAY4"])) { Alarmes[i].alDay[4]=false;}
-    if(!optionsBool(&(Alarmes[i].alDay[5]), docAlarme["ALDAY5"])) { Alarmes[i].alDay[5]=false;}
-    if(!optionsBool(&(Alarmes[i].alDay[6]), docAlarme["ALDAY6"])) { Alarmes[i].alDay[6]=false;}
 
-    strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
-    
-    optionsNum(&Alarmes[i].fxAL, docAlarme["FXAL"],0,5);        
-    optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
-    // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
-    optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,100);	
-    optionsNum(&Alarmes[i].pisteMP3, docAlarme["PISTEMP3"],0,totalMP3);
-    if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].led=false;}
-    if(!optionsBool(&Alarmes[i].audio, docAlarme["AUDIO"])) { Alarmes[i].audio=false;}
+    if(Alarmes[i].actif)
+    {
+      // parametre 
+      strlcpy(Alarmes[i].nom,docAlarme["NOM"], sizeof(Alarmes[i].nom));
+      optionsNum(&Alarmes[i].heure, docAlarme["HEURE"],0,23);
+      optionsNum(&Alarmes[i].minute, docAlarme["MINUTE"],0,59);
+      // alarme jours
+
+      optionsSplit(Alarmes[i].alDay, docAlarme["ALD"],','); // terminé par le séparateur pour prendre en compte la dernière valeur
+
+      strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
+      
+      optionsNum(&Alarmes[i].fxAL, docAlarme["FXAL"],0,5);        
+      optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
+      // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
+      optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,100);	
+      optionsNum(&Alarmes[i].pisteMP3, docAlarme["PISTEMP3"],0,totalMP3);
+      if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].led=false;}
+      if(!optionsBool(&Alarmes[i].audio, docAlarme["AUDIO"])) { Alarmes[i].audio=false;}
+      Serial.println("configAlarme : mise à jour de l'alarme terminee");
+    }
     Serial.println("configAlarme : mise à jour de l'alarme terminee");
 	}
 
@@ -3274,14 +3288,6 @@ String getPage() {
   page += "<p>Vous pouvez cliquer sur ce lien , pour retourner sur l' <a href='/'>Accueil</a> .</p>";
   page += "</body></html>";
   return page;
-}
-
-void finNotif() {
-  if (AUDIONOTIF) {
-    audio('S');
-    Serial.println("fin music");
-  }
-  cmdLED(configSys.LED);
 }
 
 // ****************************

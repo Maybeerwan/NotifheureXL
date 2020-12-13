@@ -3,7 +3,7 @@
 var init=1;
 var debug=false;
 var immp=false;
-var boutons=["Aucune","Afficher / Masquer les secondes","Afficher / Masquer l'horloge","Mode luminosite Mini / Maxi / Automatique","On / Off Veilleuse","Historique Message","Afficher / masquer Minuteur","lancer Minuteur","Action 1","Action 2","Action 3"];
+var boutons=["Aucune","Afficher / Masquer les secondes","Afficher / Masquer l'horloge","Mode luminosite Mini / Maxi / Automatique","On / Off Veilleuse","Historique Message","Afficher / masquer Minuteur","lancer Minuteur","Action 1","Action 2","Action 3","Eteindre alarme en cours"];
 var Actions = ['Aucune','Afficher / Masquer les Secondes', 'Activer / desactiver Horloge','Mode Manuel ( Mini ) - Manuel ( Maxi ) - Automatique','On / Off LED','Action 1','Action 2','Action 3','Action 4','Action 5','Action 6','Afficher Historique message'];
 var couleurs=["Blanc","Rouge","Bleu","Vert","Jaune","Orange","Violet","Rose"];
 var jours = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
@@ -311,7 +311,7 @@ $.ajax({
                 $('#boxinfo').text("Désactivée");
                 $("#cardbox").addClass("d-none");
               }
-            $("#Alarme input").val(pad(jinfo.TIMEREV[0],2)+":"+pad(jinfo.TIMEREV[1],2));
+            // $("#Alarme input").val(pad(jinfo.TIMEREV[0],2)+":"+pad(jinfo.TIMEREV[1],2));
 
           if (jinfo.REV) {
             $("#blocAl").addClass("text-danger");
@@ -401,6 +401,80 @@ function getAlarmes() {
   //   \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true}]}";
   // var json = JSON.parse(data);
 
+/*
+{
+	"alarmes": [
+		{
+			"nom": "Mon réveil",
+			"actif": false,
+			"heure": 16,
+			"minute": 48,
+			"ALDAY": [
+				true,
+				true,
+				true,
+				true,
+				true,
+				true,
+				true
+			],
+			"callback": "",
+			"fxAL": 0,
+			"fxSoundAL": 0,
+			"volumeAudio": 33,
+			"pisteMP3": 2,
+			"led": false,
+			"audio": true
+		},
+		{
+			"nom": "alarme 2",
+			"actif": false,
+			"heure": 16,
+			"minute": 53,
+			"ALDAY": [
+				true,
+				true,
+				true,
+				true,
+				true,
+				true,
+				true
+			],
+			"callback": "test",
+			"fxAL": 0,
+			"fxSoundAL": 0,
+			"volumeAudio": 64,
+			"pisteMP3": 1,
+			"led": false,
+			"audio": true
+		},
+		{
+			"nom": "",
+			"actif": false,
+			"heure": 0,
+			"minute": 0,
+			"ALDAY": [
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false
+			],
+			"callback": "",
+			"fxAL": 0,
+			"fxSoundAL": 0,
+			"volumeAudio": 0,
+			"pisteMP3": 0,
+			"led": false,
+			"audio": false
+		}
+	]
+}
+*/
+
+
   $.getJSON( "/configAlarme?info", function( json ,status) {
     console.log(json);
     nbAlarme = json.NbAlarmes; 
@@ -431,12 +505,25 @@ function getAlarmes() {
           }));
     });
 
+    // $('.alday').on('change',checkDay);
+    $('.reveilAudio').on('change',reveilAudio);
+
+    for (i=1;i<=nbAlarme;i++) {
+      $('#btn_upAl'+i).on('click',upAl);
+      $('#btn_stopAl'+i).on('click',stopAl);
+    }
+  
+    $('input[type="range"]').rangeslider({
+    polyfill: false
+    });
+
+
     // remplissage des alarmes
     $.each(json.alarmes,function( key, val ) {
       console.log("key : " + key + ":" + val.NOM );
       id = key + 1;
 
-      if(val.ACTIF) {
+      if(val.actif) {
         $("#reveil"+id+" #blocAl").addClass("text-danger");
         $("#reveil"+id+" #blocAl").removeClass("text-secondary");
         $("#reveil"+id+" #blocAl h3").text("Alarme Active");
@@ -445,24 +532,24 @@ function getAlarmes() {
         $("#reveil"+id+" #blocAl").removeClass("text-danger");
         $("#reveil"+id+" #blocAl h3").text("Alarme Inactive");
       }
-      $("#reveil"+id+" #Alarme input").val(val.HEURE+":"+val.MINUTE);
-      $("#reveil"+id+" #blocAl h1").text(val.HEURE+":"+val.MINUTE);
-      $("#reveil"+id+" #titre h3").text(val.NOM);
-      $("#reveil"+id+" #reveilTitle input").val(val.NOM);
+      $("#reveil"+id+" #Alarme input").val(val.heure+":"+val.minute);
+      $("#reveil"+id+" #blocAl h1").text(val.heure+":"+val.minute);
+      $("#reveil"+id+" #titre h3").text(val.nom);
+      $("#reveil"+id+" #reveilTitle input").val(val.nom);
       $('#reveilAudio'+id).prop('checked',val.audio);
       $('#infoTypeAudio'+id).text(" ("+typeAudio[tA]+")");
       
       if(val.audio) {
         if (tA==1) {
           $('#groupAUDIO1_'+id).removeClass("d-none");
-          $("#selectTheme"+id).val(val.FXSOUNDAL);
+          $("#selectTheme"+id).val(val.fxAL);
         }
         else if (tA==2) {
           $('#groupAUDIO2_'+id).removeClass("d-none");
         
-          $('#volAUDIO'+id).val(val.VOLUMEAUDIO); 
+          $('#volAUDIO'+id).val(val.volumeAudio); 
           valueOutput(document.getElementById('volAUDIO'+id));
-          $("#pistemp3"+id).val(val.PISTEMP3);
+          $("#pistemp3"+id).val(val.pisteMP3);
         }
       }
       $("#reveil"+id+" #urlAction input").val(val.callback);   
@@ -779,7 +866,7 @@ function Alarmes(id, cle = "" , valeur = "") {
   if (key=="ACTIF") 
   {
     val=valeur;
-    if(val=="True")
+    if(val=="true")
     {
       time=$("#reveil"+id+" #blocAl h1").text().split(":");
       additional = "&heure="+time[0]+"&minute="+time[1];
@@ -793,7 +880,7 @@ function Alarmes(id, cle = "" , valeur = "") {
           additional+="&FXSOUNDAL="+$("#selectTheme"+id+" option:selected").val();
         }
         else if (tA==2) {
-          additional+="&VOLUMEAUDIO"+$("#volAUDIO"+id).val();
+          additional+="&VOLUMEAUDIO="+$("#volAUDIO"+id).val();
           additional+="&PISTEMP3="+$("#pistemp3"+id+" option:selected").val();
         }
       }
@@ -801,11 +888,17 @@ function Alarmes(id, cle = "" , valeur = "") {
         additional += "&audio=false";
       }
 
+      var ald="";
+      for (i=1;i<8;i++) {
+        ald+=$("#reveil"+id+" #alday"+i).prop('checked')+","; // (i==7?"":",")
+      }
+      additional += "&ald="+ald;
+
       var urlAction = $("#reveil"+id+" #urlAction input").val();
       additional += "&callback="+urlAction;
     }
   }
-  else if (key=="ALD") val=valeur;
+  // else if (key=="ALD") val=valeur;
   else val=$(this).prop('checked');
   
   // console.log ("Envoie des valeur "+key+"="+val + " pour l'alarme d'id "+id+ " " + additional);
@@ -820,16 +913,16 @@ function Alarmes(id, cle = "" , valeur = "") {
     var reveilid = e.target.value || e.target.parentNode.value
     ald="";
     for (i=1;i<8;i++) {
-      ald+=$("#reveil"+reveilid+" #alday"+i).prop('checked')+",";
+      ald+=$("#reveil"+reveilid+" #alday"+i).prop('checked')+(i==7?"":",");
     }
-    Alarmes(reveilid,'ALD',ald);
+    // Alarmes(reveilid,'ALD',ald);
   }
 
   /***
    * Apeler si activ ation notification audio pour le réveil
    * @param {*} e event correspondant au bouton pressé
    */
-  function revailAudio(e){
+  function reveilAudio(e){
     var boutonid = e.target.id || e.target.parentNode.id
     var id = boutonid.substring("reveilAudio".length);
      if ($(this).prop('checked'))  {
@@ -861,7 +954,7 @@ function Alarmes(id, cle = "" , valeur = "") {
     nom = $("#reveil"+id+" #reveilTitle input").val();
     if(nom!="") $("#reveil"+id+" #titre h3").text(nom);
 
-    Alarmes(id, "ACTIF", "True");
+    Alarmes(id, "ACTIF", "true");
   }
   /**
    * si desactivation de l'alarme
@@ -875,7 +968,7 @@ function Alarmes(id, cle = "" , valeur = "") {
     $("#reveil"+id+" #blocAl").removeClass("text-danger");
     $("#reveil"+id+" #blocAl h3").text("Alarme Inactive");
 
-    Alarmes(id, "ACTIF", "False");
+    Alarmes(id, "ACTIF", "false");
   }
 
 function reveilhtmlAudio(){
@@ -1147,15 +1240,9 @@ $( document ).ready(function() {
   $('#REV').on('change',Options);
   $('#LED').on('change',Options);
   $('#BRI').on('change',Options);
-  $('.alday').on('change',checkDay);
   $('#COLOR').on('change',Options);
   $('#DDHT').on('change',Options);
-  $('.reveilAudio').on('change',revailAudio);;
-
-  for (i=1;i<=nbAlarme;i++) {
-    $('#btn_upAl'+i).on('click',upAl);
-    $('#btn_stopAl'+i).on('click',stopAl);
-  }
+  $('.reveilAudio').on('change',reveilAudio);;
 
   $('input[type="range"]').rangeslider({
   polyfill: false

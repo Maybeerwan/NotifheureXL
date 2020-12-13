@@ -2,7 +2,7 @@
 
 var debug=true;
 var maxdisplay;
-var boutons=["Aucune","Afficher / Masquer les secondes","Afficher / Masquer l'horloge","Mode luminosite Mini / Maxi / Automatique","On / Off Veilleuse","Historique Message","Afficher / masquer Minuteur","lancer Minuteur","Action 1","Action 2","Action 3"];
+var boutons=["Aucune","Afficher / Masquer les secondes","Afficher / Masquer l'horloge","Mode luminosite Mini / Maxi / Automatique","On / Off Veilleuse","Historique Message","Afficher / masquer Minuteur","lancer Minuteur","Action 1","Action 2","Action 3","Eteindre alarme en cours"];
 var couleurs=["Blanc","Rouge","Bleue","Vert","Jaune","Orange","Violet","Rose"];
 var optLed=["Aucune","Led","Relais","Neopixel Ring/Strip"];
 var fx=['Aucun','on','flash','breath','raimbow','colorWipe ( Single LED )','colorWipe ( Full LED )','color chase'];
