@@ -823,9 +823,9 @@ sprite[] =
 };
 
 // Gestion des alarmes //
-#define NB_ALARMES 3
-const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES* (JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12)) + 1;
-const size_t capacityAlarme = JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(12) + 1;
+#define NB_ALARMES 5
+const size_t capacityAlarmes =JSON_ARRAY_SIZE(NB_ALARMES)  + NB_ALARMES* (JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(14)) + 1;
+const size_t capacityAlarme = JSON_ARRAY_SIZE(7) + JSON_ARRAY_SIZE(130) + JSON_OBJECT_SIZE(14) + 1;
 
 struct sAlarme {			
   // byte id;        // id de alarme	
@@ -841,9 +841,14 @@ struct sAlarme {
   int pisteMP3;         // piste MP3 si tA == 2 
   bool led;
   bool audio;       // définit si l'audio est activé
+  bool repeat;
+  byte timeSleep;
 };
 
 sAlarme Alarmes[NB_ALARMES];  // Nombre d'alarmes
+byte alarmeDring = -1;   // True si une alarme est en cours de sonnerie
+byte repeatAlarme = -1; // id de l'alarme en cours de repeat
+byte nextTimeRev[2]; // heure du prochain repeat
 
  //void setType() {MD_MAX72XX::setModuleType(HARDWARE_TYPE);}
 /*************************
@@ -1050,15 +1055,15 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
 	JsonArray jsonAlarmes = docAlarmes["alarmes"];
 	
 	for(int i=0; i<nbAlarme; i++) {
-	JsonObject objAlarmes = jsonAlarmes[i];
-	
-	// parametre
-  // alarmes[i].id = objAlarmes["id"] | i;
-  strlcpy(alarmes[i].nom,objAlarmes["nom"], sizeof(alarmes[i].nom));
-	alarmes[i].actif = objAlarmes["actif"] | false;		
-	alarmes[i].heure = objAlarmes["heure"] | 0;
-	alarmes[i].minute = objAlarmes["minute"] | 0;
-	// alarme jours
+    JsonObject objAlarmes = jsonAlarmes[i];
+    
+    // parametre
+    // alarmes[i].id = objAlarmes["id"] | i;
+    strlcpy(alarmes[i].nom,objAlarmes["nom"], sizeof(alarmes[i].nom));
+    alarmes[i].actif = objAlarmes["actif"] | false;		
+    alarmes[i].heure = objAlarmes["heure"] | 0;
+    alarmes[i].minute = objAlarmes["minute"] | 0;
+	  // alarme jours
     alarmes[i].alDay[0] = objAlarmes["ALDAY"][0] | false;
     alarmes[i].alDay[1] = objAlarmes["ALDAY"][1] | false;
     alarmes[i].alDay[2] = objAlarmes["ALDAY"][2] | false;
@@ -1068,13 +1073,14 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
     alarmes[i].alDay[6] = objAlarmes["ALDAY"][6] | false;
     // alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
 	
-	strlcpy(alarmes[i].callback,objAlarmes["callback"], sizeof(alarmes[i].callback));
-	alarmes[i].fxAL = objAlarmes["fxAL"] |0;         
-	alarmes[i].fxSoundAL = objAlarmes["fxSoundAL"] |0;    
-	alarmes[i].volumeAudio = objAlarmes["volumeAudio"] |0;	
-	alarmes[i].pisteMP3 = objAlarmes["pisteMP3"] |0;
-	alarmes[i].led = objAlarmes["led"] | false;
-  alarmes[i].audio = objAlarmes["audio"] | false;
+    strlcpy(alarmes[i].callback,objAlarmes["callback"], sizeof(alarmes[i].callback));
+    alarmes[i].fxAL = objAlarmes["fxAL"] |0;         
+    alarmes[i].fxSoundAL = objAlarmes["fxSoundAL"] |0;    
+    alarmes[i].volumeAudio = objAlarmes["volumeAudio"] |0;	
+    alarmes[i].pisteMP3 = objAlarmes["pisteMP3"] |0;
+    alarmes[i].led = objAlarmes["led"] | false;
+    alarmes[i].audio = objAlarmes["audio"] | false;
+    alarmes[i].repeat = objAlarmes["repeat"] | false;
 	}
 
 	file.close();
@@ -1096,14 +1102,14 @@ String createAlarmeJson(sAlarme  *alarmes) {
   
     JsonObject objAlarmes = docAlarmes.createNestedObject();
 
-    // parametre
-    // objAlarmes["id"] = alarmes[i].id;
-    objAlarmes["nom"] = alarmes[i].nom;
-    objAlarmes["actif"] = alarmes[i].actif;		
-    objAlarmes["heure"] = alarmes[i].heure;
-    objAlarmes["minute"] = alarmes[i].minute;
-    // alarme jours
-    JsonArray aday = objAlarmes.createNestedArray("ALDAY");
+      // parametre
+      // objAlarmes["id"] = alarmes[i].id;
+      objAlarmes["nom"] = alarmes[i].nom;
+      objAlarmes["actif"] = alarmes[i].actif;		
+      objAlarmes["heure"] = alarmes[i].heure;
+      objAlarmes["minute"] = alarmes[i].minute;
+      // alarme jours
+      JsonArray aday = objAlarmes.createNestedArray("ALDAY");
       aday.add(alarmes[i].alDay[0]);
       aday.add(alarmes[i].alDay[1]);
       aday.add(alarmes[i].alDay[2]);
@@ -1112,15 +1118,15 @@ String createAlarmeJson(sAlarme  *alarmes) {
       aday.add(alarmes[i].alDay[5]);
       aday.add(alarmes[i].alDay[6]);
       // aday.add(alarmes[i].alDay[7]);   
-    
-    objAlarmes["callback"] = alarmes[i].callback;
-    objAlarmes["fxAL"] = alarmes[i].fxAL;         
-    objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
-    objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
-    objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
-    objAlarmes["led"] = alarmes[i].led;
-    objAlarmes["audio"] = alarmes[i].audio;    
-
+      
+      objAlarmes["callback"] = alarmes[i].callback;
+      objAlarmes["fxAL"] = alarmes[i].fxAL;         
+      objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
+      objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
+      objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
+      objAlarmes["led"] = alarmes[i].led;
+      objAlarmes["audio"] = alarmes[i].audio;    
+      objAlarmes["repeat"] = alarmes[i].repeat;   
 }
   // envoie alarmes json
   serializeJsonPretty(doc,json);
@@ -1842,12 +1848,23 @@ void displayHisto() {
   else iH++;
 }
 
-void finNotif() {
+void finNotif(bool finAlarme = true) {
   if (AUDIONOTIF) {
     audio('S');
     Serial.println("fin music");
   }
   cmdLED(configSys.LED);
+  alarmeDring = -1;
+  if(repeatAlarme >= 0 && !finAlarme)
+  {
+    byte min = minute()+Alarmes[repeatAlarme].timeSleep;
+    nextTimeRev[1] = (min<60)?min:min-60;
+    nextTimeRev[0] = (min<60)?hour():hour()+1;
+  }
+  else {
+    repeatAlarme = -1;
+  }
+
 }
 
 void BoutonAction(byte btn , byte btnclic ) {
@@ -1912,8 +1929,11 @@ switch (actionClick) {
       case 10 : //URL Action 1
                 ToBox(configSys.URL_Action3,3);
       break;
-      case 11 : // eteindre alarmes
-              finNotif();
+      case 11 : // sleep alarmes
+              finNotif(false);
+      break; 
+      case 12 : // eteindre alarmes
+              finNotif(true);
       break; 
     default:
 
@@ -1930,34 +1950,61 @@ if (configSys.broker) {
     String t="";
     String pl="";
     t=topicName+"/btn"+String(btn);
-    pl=String(btnclic);
+    pl=String(hour())+":"+String(minute())+"."+second()+" - "+String(btnclic); 
+    // pl=String(btnclic);
     t.toCharArray(topicN,80);
-    pl.toCharArray(payload,10);
+    pl.toCharArray(payload,15);
     MQTTclient.publish(topicN, payload);
  }
 }
 
-void alarme(sAlarme &alarme) {
-  Serial.println("Mode alarme");
-  //LuN=configSys.intensity;
-  notifLed=FX_led[alarme.fxAL];
-  // notifAudio.fx=alarme.fxSoundAL;
-  // notifAudio={alarme.fxSoundAL,alarme.pisteMP3,alarme.volumeAudio,zoneMsg,false};
-  notifAudio.fx=alarme.fxSoundAL; 
-  notifAudio.piste=alarme.pisteMP3; 
-  notifAudio.volume=alarme.volumeAudio; 
-  notifAudio.nzo=zoneMsg;
-  notifAudio.state=false; 
-  notifAudio.active=alarme.audio;
+void alarme(byte numAalarme) {
+  if(alarmeDring >= 0) {
+    Serial.println("Activation alarme");
+    // sAlarme alarme = Alarmes[numAalarme];
+    //LuN=configSys.intensity;
+    notifLed=FX_led[Alarmes[numAalarme].fxAL];
+    notifAudio.fx=Alarmes[numAalarme].fxSoundAL; 
+    notifAudio.piste=Alarmes[numAalarme].pisteMP3; 
+    notifAudio.volume=Alarmes[numAalarme].volumeAudio; 
+    notifAudio.nzo=zoneMsg;
+    notifAudio.state=false; 
+    notifAudio.active=Alarmes[numAalarme].audio;
 
-  displayNotif(alarme.nom,zoneTime);
+    if(Alarmes[numAalarme].repeat)
+    {
+      repeatAlarme = numAalarme;
+    }
+    else
+    {
+      repeatAlarme = -1;
+    }
+    
+    displayNotif(Alarmes[numAalarme].nom,zoneTime);
+    alarmeDring = numAalarme;
 
-  if (configSys.box) BoutonAction(10 , configSys.action[1] ); // TODO c'est quoi ???
+    if (configSys.box) BoutonAction(10 , configSys.action[1] ); // déclanchement de l'action alarme
+  }
+
 }
 
 void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
 {
   // Serial.println("Vérification des alarmes j:" + String(day));
+  //byte repeatAlarme = -1; // id de l'alarme en cours de repeat
+  // byte nextTimeRev[2]; // heure du prochain repeat
+  if(repeatAlarme < -1)
+  {
+    if(hour==nextTimeRev[0] && minute==nextTimeRev[1])
+      {  
+        if (seconde <5 && seconde >0 )
+        {
+          Serial.println("Réactivation de l'alarme " + String(repeatAlarme));
+          alarme(repeatAlarme);
+        }
+      }
+  }
+
   for(int i=0; i<NB_ALARMES; i++)
   {
     if(Alarmes[i].actif && Alarmes[i].alDay[day])
@@ -1967,7 +2014,7 @@ void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
         if (seconde <5 && seconde >0 )
         {
           Serial.println("Lancement de l'alarme " + i);
-          alarme(Alarmes[i]);
+          alarme(i);
         }
       }
     }
@@ -3216,7 +3263,8 @@ boolean MQTTconnect() {
       //clientId += String(random(0xffff), HEX);
       clientId += idNotif;
     // Attempt to connect
-  if (MQTTclient.connect(clientId.c_str(),configSys.userbroker,configSys.passbroker)) {
+  // if (MQTTclient.connect(clientId.c_str(),configSys.userbroker,configSys.passbroker)) {
+    if (MQTTclient.connect(clientId.c_str())) {
       // connexion ok
         statebroker=true;
 
