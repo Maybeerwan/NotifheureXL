@@ -197,6 +197,7 @@ const char* www_password = "notif";
 #define TOPIC_OPTIONS "/options"
 #define TOPIC_CONFIG "/config"
 #define TOPIC_STATE "/state"
+#define TOPIC_ALARMES "/alarmes"
 #define TEMPO_BROKER 120  // 120 secondes pour mise à jour états auto
 #define DISCOVERY_PREFIX "homeassistant"
 
@@ -1081,6 +1082,7 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
     alarmes[i].led = objAlarmes["led"] | false;
     alarmes[i].audio = objAlarmes["audio"] | false;
     alarmes[i].repeat = objAlarmes["repeat"] | false;
+    alarmes[i].timeSleep = objAlarmes["timeSleep"] | 5;
 	}
 
 	file.close();
@@ -1088,9 +1090,8 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
   // Serial.println("loadAlarmes : Chargement des alarmes OK");
 }
 
-String createAlarmeJson(sAlarme  *alarmes) {
+DynamicJsonDocument createAlarmeDocJson(sAlarme  *alarmes) {
   // Serial.println("createAlarmeJson : creation du json");
-  String json;
   DynamicJsonDocument doc(capacityAlarmes);
 
   // JsonObject obj = doc.createNestedObject();
@@ -1126,9 +1127,16 @@ String createAlarmeJson(sAlarme  *alarmes) {
       objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
       objAlarmes["led"] = alarmes[i].led;
       objAlarmes["audio"] = alarmes[i].audio;    
-      objAlarmes["repeat"] = alarmes[i].repeat;   
+      objAlarmes["repeat"] = alarmes[i].repeat;  
+      objAlarmes["timeSleep"] = alarmes[i].timeSleep;  
 }
   // envoie alarmes json
+  return doc;
+}
+
+String createAlarmeJson(sAlarme  *alarmes) {
+  String json;
+  DynamicJsonDocument doc = createAlarmeDocJson(alarmes);
   serializeJsonPretty(doc,json);
   Serial.println("createAlarmeJson : creation du json OK");
   return json;
@@ -1141,6 +1149,26 @@ void saveAlarmes(const char *fileAlarmes,String json) {
    }
    f.print(json);  // sauvegarde de la chaine
    f.close();
+}
+
+void MQTTsendAlarme(sAlarme  *alarmes) {
+
+  String jsonAlarme = createAlarmeJson(alarmes);
+  // Length (with one extra character for the null terminator)
+  int str_len = jsonAlarme.length() + 1; 
+
+  // Prepare the character array (the buffer) 
+  char char_array[str_len];
+
+  // Copy it over 
+  jsonAlarme.toCharArray(char_array, str_len);
+
+  Serial.println("envoie publication MQTT");
+  //docMqtt["temperature"]=String(temperature);
+  // size_t n = serializeJson(doc, buffer);
+  String t=topicName+String(TOPIC_ALARMES);
+  Serial.println(t);
+  MQTTclient.publish(t.c_str(), char_array);
 }
 
 // fonction audio ( 0:none , 1 : Buzzer , 2 = MP3player , 4 = relais , 5 = sortie PIN digital)
@@ -2870,6 +2898,7 @@ void handleAlarme() {
     // Serial.println("configAlarme : sauvegarde de l'alarme");
     saveAlarmes(fileAlarmes,json);
     // Serial.println("configAlarme : sauvegarde de l'alarme terminee");
+    MQTTsendAlarme(Alarmes);
 
   server.send(200,"application/json",json);
 
