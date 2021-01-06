@@ -1046,11 +1046,11 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
 		msgDebug+=err.c_str();
 	}
 	
-	byte nbAlarme = docAlarmes["NbAlarmes"] | 0; // si pas de chiffre alors pas d'alarmes
+	byte nbAlarme = docAlarmes["NbAlarmes"] | NB_ALARMES; // si pas de chiffre alors pas d'alarmes
 	
 	if(nbAlarme != NB_ALARMES)
 	{
-		msgDebug+="Nombre alarmes différent";
+		msgDebug+="Nombre alarmes différent" + String(nbAlarme) + " != " + String(NB_ALARMES);
 	}
 	
 	JsonArray jsonAlarmes = docAlarmes["alarmes"];
@@ -1876,7 +1876,7 @@ void displayHisto() {
   else iH++;
 }
 
-void finNotif(bool finAlarme = true) {
+void finNotif2(bool finAlarme) {
   if (AUDIONOTIF) {
     audio('S');
     Serial.println("fin music");
@@ -1895,6 +1895,10 @@ void finNotif(bool finAlarme = true) {
 
 }
 
+void finNotif()
+{
+  finNotif2(true);
+}
 void BoutonAction(byte btn , byte btnclic ) {
 int actionClick=0;
 int m=0;
@@ -1958,10 +1962,10 @@ switch (actionClick) {
                 ToBox(configSys.URL_Action3,3);
       break;
       case 11 : // sleep alarmes
-              finNotif(false);
+              finNotif2(false);
       break; 
       case 12 : // eteindre alarmes
-              finNotif(true);
+              finNotif2(true);
       break; 
     default:
 
