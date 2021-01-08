@@ -1046,11 +1046,11 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
 		msgDebug+=err.c_str();
 	}
 	
-	byte nbAlarme = docAlarmes["NbAlarmes"] | NB_ALARMES; // si pas de chiffre alors pas d'alarmes
+	byte nbAlarme = docAlarmes["NbAlarmes"] | 0; // si pas de chiffre alors pas d'alarmes
 	
 	if(nbAlarme != NB_ALARMES)
 	{
-		msgDebug+="Nombre alarmes différent" + String(nbAlarme) + " != " + String(NB_ALARMES);
+		msgDebug+="Nombre alarmes différent " + String(nbAlarme) + " != " + String(NB_ALARMES);
 	}
 	
 	JsonArray jsonAlarmes = docAlarmes["alarmes"];
@@ -1059,7 +1059,6 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
     JsonObject objAlarmes = jsonAlarmes[i];
     
     // parametre
-    // alarmes[i].id = objAlarmes["id"] | i;
     strlcpy(alarmes[i].nom,objAlarmes["nom"], sizeof(alarmes[i].nom));
     alarmes[i].actif = objAlarmes["actif"] | false;		
     alarmes[i].heure = objAlarmes["heure"] | 0;
@@ -1071,8 +1070,7 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
     alarmes[i].alDay[3] = objAlarmes["ALDAY"][3] | false;
     alarmes[i].alDay[4] = objAlarmes["ALDAY"][4] | false;
     alarmes[i].alDay[5] = objAlarmes["ALDAY"][5] | false;
-    alarmes[i].alDay[6] = objAlarmes["ALDAY"][6] | false;
-    // alarmes[i].alDay[7] = objAlarmes["ALDAY"][7] | false;   
+    alarmes[i].alDay[6] = objAlarmes["ALDAY"][6] | false; 
 	
     strlcpy(alarmes[i].callback,objAlarmes["callback"], sizeof(alarmes[i].callback));
     alarmes[i].fxAL = objAlarmes["fxAL"] |0;         
@@ -1083,6 +1081,32 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
     alarmes[i].audio = objAlarmes["audio"] | false;
     alarmes[i].repeat = objAlarmes["repeat"] | false;
     alarmes[i].timeSleep = objAlarmes["timeSleep"] | 5;
+	}
+// On complète les alarmes si nécessaire
+  for(int i=nbAlarme; i<NB_ALARMES; i++) {
+    // parametre
+    strlcpy(alarmes[i].nom,"Reveil "+String(i), sizeof(alarmes[i].nom));
+    alarmes[i].actif = false;		
+    alarmes[i].heure = 7;
+    alarmes[i].minute = 0;
+	  // jours alarme 
+    alarmes[i].alDay[0] = false;
+    alarmes[i].alDay[1] = false;
+    alarmes[i].alDay[2] = false;
+    alarmes[i].alDay[3] = false;
+    alarmes[i].alDay[4] = false;
+    alarmes[i].alDay[5] = false;
+    alarmes[i].alDay[6] = false;
+	
+    strlcpy(alarmes[i].callback,"", sizeof(alarmes[i].callback));
+    alarmes[i].fxAL = 0;         
+    alarmes[i].fxSoundAL = 0;    
+    alarmes[i].volumeAudio = 0;	
+    alarmes[i].pisteMP3 = 0;
+    alarmes[i].led = false;
+    alarmes[i].audio = false;
+    alarmes[i].repeat = false;
+    alarmes[i].timeSleep = 5;
 	}
 
 	file.close();
@@ -1104,7 +1128,6 @@ DynamicJsonDocument createAlarmeDocJson(sAlarme  *alarmes) {
     JsonObject objAlarmes = docAlarmes.createNestedObject();
 
       // parametre
-      // objAlarmes["id"] = alarmes[i].id;
       objAlarmes["nom"] = alarmes[i].nom;
       objAlarmes["actif"] = alarmes[i].actif;		
       objAlarmes["heure"] = alarmes[i].heure;
@@ -1118,7 +1141,6 @@ DynamicJsonDocument createAlarmeDocJson(sAlarme  *alarmes) {
       aday.add(alarmes[i].alDay[4]);
       aday.add(alarmes[i].alDay[5]);
       aday.add(alarmes[i].alDay[6]);
-      // aday.add(alarmes[i].alDay[7]);   
       
       objAlarmes["callback"] = alarmes[i].callback;
       objAlarmes["fxAL"] = alarmes[i].fxAL;         
@@ -1220,7 +1242,6 @@ switch (hardConfig.typeAudio) {
   if (action=='P') AUDIONOTIF=true;
   else AUDIONOTIF=false;
 }
-
 
 void cmdLED(bool val,int intLED=configSys.LEDINT,byte C=configSys.color) {
   uint32_t color=couleur[C];
