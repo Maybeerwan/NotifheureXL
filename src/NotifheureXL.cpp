@@ -343,6 +343,7 @@ const size_t capacityHisto =3*JSON_ARRAY_SIZE(10)  + JSON_OBJECT_SIZE(4) + 500;
 const char *fileconfig = "/config/config.json";  // fichier config
 const char *fileHist = "/config/Historique.json";  // fichier config
 const char *fileAlarmes = "/config/Alarmes.json"; // Fichier des alarmes
+const char *fileMP3 = "/config/mp3.json"; // Fichier des mp3
 
 // init network (wifi , broker )
 WiFiUDP ntpUDP;
@@ -1151,7 +1152,7 @@ DynamicJsonDocument createAlarmeDocJson(sAlarme  *alarmes) {
       objAlarmes["audio"] = alarmes[i].audio;    
       objAlarmes["repeat"] = alarmes[i].repeat;  
       objAlarmes["timeSleep"] = alarmes[i].timeSleep;  
-}
+  }
   // envoie alarmes json
   return doc;
 }
@@ -1192,6 +1193,12 @@ void MQTTsendAlarme(sAlarme  *alarmes) {
   Serial.println(t);
   MQTTclient.publish(t.c_str(), char_array);
 }
+
+String getJsonMP3()
+{
+
+}
+
 
 // fonction audio ( 0:none , 1 : Buzzer , 2 = MP3player , 4 = relais , 5 = sortie PIN digital)
 void audio(char action='P')
@@ -2032,7 +2039,7 @@ void alarme(byte numAalarme) {
     {
       repeatAlarme = -1;
     }
-    
+
     displayNotif(Alarmes[numAalarme].nom,zoneTime);
     alarmeDring = numAalarme;
 
@@ -2164,9 +2171,6 @@ void loadConfigSys(const char *fileconfig, sConfigSys  &config) {
 } // fin fonction loadconfig
 
 
-
-
-
 // chaine decalage
 void createHStringXL(char *pH, char *pL)
 {
@@ -2179,7 +2183,6 @@ void createHStringXL(char *pH, char *pL)
 
 void createSecondes(char *Sec)
 {
-
   for (; *Sec != '\0'; Sec++)  *Sec = *Sec + 32;   // decalage caractére de 32
     *Sec = '\0'; // termine la chaine
 }
@@ -2266,54 +2269,6 @@ bool isPhotocell() {
     else  return true;
 
 }
-
-
-
-
-//websockets
-/*
-void webSocketEvent(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-  String s((const __FlashStringHelper*) payload);
-    switch(type) {
-        case WStype_DISCONNECTED:
-          //  USE_SERIAL.printf("[%u] Disconnected!\n", num);
-            break;
-        case WStype_CONNECTED:
-            {
-                IPAddress ip = webSocket.remoteIP(num);
-              //  USE_SERIAL.printf("[%u] Connected from %d.%d.%d.%d url: %s\n", num, ip[0], ip[1], ip[2], ip[3], payload);
-
-				// send message to client
-				webSocket.sendTXT(num, "Connected");
-            }
-            break;
-        case WStype_TEXT:
-
-          //  USE_SERIAL.printf("[%u] get Text: %s\n", num, payload);
-
-            // send message to client
-            // webSocket.sendTXT(num, "message here");
-
-            // send data to all connected clients
-            // webSocket.broadcastTXT("message here");
-            break;
-        case WStype_BIN:
-        //    USE_SERIAL.printf("[%u] get binary length: %u\n", num, length);
-        //    hexdump(payload, length);
-
-            // send message to client
-            // webSocket.sendBIN(num, payload, length);
-            break;
-		case WStype_ERROR:
-		case WStype_FRAGMENT_TEXT_START:
-		case WStype_FRAGMENT_BIN_START:
-		case WStype_FRAGMENT:
-		case WStype_FRAGMENT_FIN:
-			break;
-    }
-
-}
-*/
 
 //MDNS
 void serverMDNS( String Nom_MDNS) {
@@ -2875,6 +2830,36 @@ void updateOptions() {
   upOpt=0;
 }
 
+void handleMusique() {
+  String key,value,rep;
+  bool play = false;
+  int numPiste=-1,vol=-1;
+
+  for (int i = 0; i < server.args(); i++) {
+    key=server.argName(i);
+    key.toUpperCase();
+    value=server.arg(i);
+
+    if(key=="PLAY") {optionsBool(&play,value);}
+    if(key=="PISTE") {ptionsNum(&numPiste, value,1,265);}
+    if(key=="VOL") {ptionsNum(&vol, value,1,100);}
+  }
+  if (play && numPiste>0 && vol>0) 
+  {
+    notifAudio.piste=numPiste; 
+    notifAudio.volume=vol; 
+    displayNotif("Test",zoneTime);
+    rep="Lecture du morceau n"+String(numPiste)+" au volume "+String(vol);
+  }
+  else
+  {
+    audio('S');
+    rep="Arrêt audio";
+  }
+  
+  server.send(200,"text/plane",rep);
+}
+
 void handleAlarme() {
   
   DynamicJsonDocument docAlarme(capacityAlarme); // TODO eventuellement réduire la capacite
@@ -2905,8 +2890,10 @@ void handleAlarme() {
 
       optionsSplit(Alarmes[i].alDay, docAlarme["ALD"],','); // terminé par le séparateur pour prendre en compte la dernière valeur
 
-      strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
-      
+      // strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
+      if(!optionsBool(&Alarmes[i].repeat, docAlarme["REPEAT"])) { Alarmes[i].repeat=false;}
+      optionsNum(&Alarmes[i].timeSleep, docAlarme["STIME"],0,30);  
+
       optionsNum(&Alarmes[i].fxAL, docAlarme["FXAL"],0,5);        
       optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
       // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
@@ -3480,6 +3467,7 @@ if (configSys.broker) {
  server.on("/Options",handleOptions); //page gestion Options
  server.on("/getInfo",handleGetInfo); //page gestion Options
  server.on("/configAlarme",handleAlarme); // configAlarme
+ server.on("/testaudio",handleMusique);// Test audio
  server.on("/finAlarme", finNotif); // arret de l'alarme en cours
  // Gestion securisé page config
  server.on("/setup.html", []() {
@@ -3553,6 +3541,13 @@ server.onNotFound([]() {
       int vol=floor(configSys.volumeAudio*30/100);
       vol=constrain(vol,0,30);
       myDFPlayer.volume(vol);  //Monte le volume à 12 ( valeur de 0 à 30 )
+      myDFPlayer.EQ(DFPLAYER_EQ_NORMAL);
+      //  myDFPlayer.EQ(DFPLAYER_EQ_POP);
+      //  myDFPlayer.EQ(DFPLAYER_EQ_ROCK);
+      //  myDFPlayer.EQ(DFPLAYER_EQ_JAZZ);
+      //  myDFPlayer.EQ(DFPLAYER_EQ_CLASSIC);
+      //  myDFPlayer.EQ(DFPLAYER_EQ_BASS);
+
     // ---- indique d'utiliser le player de carte SD interne
       myDFPlayer.outputDevice(DFPLAYER_DEVICE_SD);
 
@@ -3560,7 +3555,7 @@ server.onNotFound([]() {
     totalMP3=myDFPlayer.readFileCounts(); //Le nombre total de fichier mp3 sur la carte ( dossier inclus )
     nMP3_1=myDFPlayer.readFileCountsInFolder(1); // dossier 1 , nombre fichier
     // Joue le premier morceau de la liste
-    myDFPlayer.playFolder(1,configSys.MP3Start);
+    // myDFPlayer.playFolder(1,configSys.MP3Start);
     }
     break;
   }
@@ -3791,6 +3786,9 @@ if (ntpOK) {
     {
     _lastSynchro=now();
     }
+}
+else {
+  checkntp = true; 
 }
   //MDNS.update();
 

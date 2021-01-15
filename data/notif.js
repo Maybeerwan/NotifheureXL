@@ -11,7 +11,10 @@ var mois = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","
 var typeAudio = ["Absent","HP / Buzzer","MP3Player","Autre"];
 var typeLed= ["Absent","LED Interne","Commande Relais","Neopixel Ring","Sortie Digitale"];
 var buzMusic=["Mission Impossible","Star Wars","Indiana Jones","Panthere Rose","Famille Adam's","l'exorciste","The simpsons","Tetris","Arkanoid","Super Mario","Xfiles","AxelF","PacMan","dambuste","Muppet show","James Bond","Take On Me","Agence tout risque","Top Gun","les Schtroumpfs","l'arnaque","looney Tunes","20 century fox","Le bon, la brute ...","Retour vers le futur"];
-var pisteMP3=["Piste 1", "piste 2", "piste 3"];
+
+// var pisteMP3=["Piste 1", "piste 2", "piste 3"];
+var pisteMP3;
+
 var ZXL=["Zone XL","Zone XL haut","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone notif 6"];
 var Z=["Zone Horloge","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone Notif 6","Zone Notif 7"];
 var fx=[ 'PRINT','SCROLL_LEFT','SCROLL_UP_LEFT','SCROLL_DOWN_LEFT','SCROLL_UP','GROW_UP','SCAN_HORIZ','BLINDS','WIPE','SCAN_VERTX','SLICE','FADE','OPENING_CURSOR','NO_EFFECT','SPRITE','CLOSING','SCAN_VERT','WIPE_CURSOR','SCAN_HORIZX','DISSOLVE','MESH','OPENING','CLOSING_CURSOR','GROW_DOWN','SCROLL_DOWN','SCROLL_DOWN_RIGHT','SCROLL_UP_RIGHT','SCROLL_RIGHT','RANDOM'];
@@ -27,7 +30,7 @@ var ajaxload=false;
 var ver;
 var pause;
 var color;
-var nbAlarme;
+var nbAlarme=0;
 
 function IsJsonString(str) {
 try {
@@ -75,7 +78,7 @@ var output = element.parentNode.getElementsByTagName('output')[0] || element.par
 output['innerText'] = value;
 }
 
-var DEBUG=true;
+var DEBUG=false;
 
 function checktime() {
   $.get('/Config?checktime');
@@ -395,90 +398,17 @@ $.ajax({
 }
 
 function getAlarmes() {
-  // tA = 2;
-  // var data="{\"NbAlarmes\":1,\"alarmes\":[\
-  //   {\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"PISTEMP3\":2,\"callback\":\"https://monardesseafaire/\",\
-  //   \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true}]}";
-  // var json = JSON.parse(data);
-
-/*
-{
-	"alarmes": [
-		{
-			"nom": "Mon réveil",
-			"actif": false,
-			"heure": 16,
-			"minute": 48,
-			"ALDAY": [
-				true,
-				true,
-				true,
-				true,
-				true,
-				true,
-				true
-			],
-			"callback": "",
-			"fxAL": 0,
-			"fxSoundAL": 0,
-			"volumeAudio": 33,
-			"pisteMP3": 2,
-			"led": false,
-			"audio": true
-		},
-		{
-			"nom": "alarme 2",
-			"actif": false,
-			"heure": 16,
-			"minute": 53,
-			"ALDAY": [
-				true,
-				true,
-				true,
-				true,
-				true,
-				true,
-				true
-			],
-			"callback": "test",
-			"fxAL": 0,
-			"fxSoundAL": 0,
-			"volumeAudio": 64,
-			"pisteMP3": 1,
-			"led": false,
-			"audio": true
-		},
-		{
-			"nom": "",
-			"actif": false,
-			"heure": 0,
-			"minute": 0,
-			"ALDAY": [
-				false,
-				false,
-				false,
-				false,
-				false,
-				false,
-				false
-			],
-			"callback": "",
-			"fxAL": 0,
-			"fxSoundAL": 0,
-			"volumeAudio": 0,
-			"pisteMP3": 0,
-			"led": false,
-			"audio": false
-		}
-	]
-}
+  /* tA = 2;
+   var data="{\"NbAlarmes\":2,\"alarmes\":[\
+     {\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"pisteMP3\":255,\"repeat\":true,\"timeSleep\":9,\
+     \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true},{\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"pisteMP3\":2,\"repeat\":\"true\",\"timeSleep\":7,\
+     \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true}]}";
+   var json = JSON.parse(data);
 */
-
-
   $.getJSON( "/configAlarme?info", function( json ,status) {
     console.log(json);
     nbAlarme = json.NbAlarmes; 
-    console.log(nbAlarme);
+    // console.log(nbAlarme);
     // création du HTML
     var visible=true;
     for(i=1;i<=nbAlarme;i++){
@@ -498,15 +428,18 @@ function getAlarmes() {
     });
 
     //remplissage select MP3
-    $.each(pisteMP3, function (value, text) {
-      $('.pistemp3').append($('<option>', {
+    // categoriemp3
+     $.each(pisteMP3, function (value, text) {
+      $('.categoriemp3').append($('<option>', {
               value: value+1,
-              text : (value+1)+" - "+text
+              text : (value+1)+" - "+text.categorie
           }));
     });
 
     // $('.alday').on('change',checkDay);
     $('.reveilAudio').on('change',reveilAudio);
+    $('.categoriemp3').on('change',onChangeCategorieMP3);
+    $('.repeatAlarme').on('change',changeRepeat);
 
     for (i=1;i<=nbAlarme;i++) {
       $('#btn_upAl'+i).on('click',upAl);
@@ -520,7 +453,6 @@ function getAlarmes() {
 
     // remplissage des alarmes
     $.each(json.alarmes,function( key, val ) {
-      console.log("key : " + key + ":" + val.NOM );
       id = key + 1;
 
       if(val.actif) {
@@ -549,17 +481,47 @@ function getAlarmes() {
         
           $('#volAUDIO'+id).val(val.volumeAudio); 
           valueOutput(document.getElementById('volAUDIO'+id));
-          $("#pistemp3"+id).val(val.pisteMP3);
+
+          $("#numPisteMP3"+id).val(val.pisteMP3); 
+          if(typeof pisteMP3 == 'undefined'){
+            console.log("Valeur non défini");
+         }else{
+          setPisteMP3Alarme(pisteMP3);
+         }         
+          
         }
       }
-      $("#reveil"+id+" #urlAction input").val(val.callback);   
-      
+      //repeat
+      $("#reveil"+id+" #repeatAlarme"+id).prop('checked',val.repeat);   
+      if (val.repeat)  {
+        $('#SleepTime'+id).val(val.timeSleep);
+        $('#SleepTime'+id).removeClass("d-none");
+        $('#infoSleepTime'+id).removeClass("d-none");
+      }
+      else {
+       $('#SleepTime'+id).addClass("d-none");
+       $('#infoSleepTime'+id).addClass("d-none");
+      }
       // jour
       for (i=0;i<7;i++) {
         $("#reveil"+id+" #alday"+(i+1)).prop('checked',val.ALDAY[i]);
       }
     });
  });
+}
+
+function changeRepeat(e){
+  
+  var boutonid = e.target.id || e.target.parentNode.id;
+    var id = boutonid.substring("repeatAlarme".length);
+     if ($("#reveil"+id+" #repeatAlarme"+id).prop('checked'))  {
+       $('#SleepTime'+id).removeClass("d-none");
+       $('#infoSleepTime'+id).removeClass("d-none");
+     }
+     else {
+      $('#SleepTime'+id).addClass("d-none");
+      $('#infoSleepTime'+id).addClass("d-none");
+     }
 }
 
 function getHisto() {
@@ -860,7 +822,6 @@ if (res[0]=="INT") {
 function Alarmes(id, cle = "" , valeur = "") {
 
   key = ((typeof cle != 'object') ? cle : key=$(this).attr('id'));
-  // console.log ( "Alarmes : valeur de key :"+$(this).attr('id')+" et type cle "+typeof cle);
   additional = "";
  
   if (key=="ACTIF") 
@@ -874,7 +835,6 @@ function Alarmes(id, cle = "" , valeur = "") {
       if(nom!="") additional+= "&nom="+nom;
       
       if ($('#reveilAudio'+id).prop('checked')) {
-        // console.log("alarme sonore");
         additional += "&audio=true";
         if (tA==1) {
           additional+="&FXSOUNDAL="+$("#selectTheme"+id+" option:selected").val();
@@ -890,32 +850,59 @@ function Alarmes(id, cle = "" , valeur = "") {
 
       var ald="";
       for (i=1;i<8;i++) {
-        ald+=$("#reveil"+id+" #alday"+i).prop('checked')+","; // (i==7?"":",")
+        ald+=$("#reveil"+id+" #alday"+i).prop('checked')+","; 
       }
       additional += "&ald="+ald;
 
-      var urlAction = $("#reveil"+id+" #urlAction input").val();
-      additional += "&callback="+urlAction;
+      var isRepeat = $("#reveil"+id+" #repeatAlarme"+id).prop('checked');
+      if(isRepeat)
+      {
+        additional += "&repeat=true";
+        additional += "&stime=" + $("#reveil"+id+" #SleepTime"+id).val();
+      }
+      else
+      {
+        additional += "&repeat=false";
+      }
+      
     }
   }
-  // else if (key=="ALD") val=valeur;
   else val=$(this).prop('checked');
   
-  // console.log ("Envoie des valeur "+key+"="+val + " pour l'alarme d'id "+id+ " " + additional);
+  console.log ("Envoie des valeur "+key+"="+val + " pour l'alarme d'id "+id+ " " + additional);
   url="/configAlarme?ID="+(id-1)+"&"+key+"="+val+additional; 
   $.get(url, function( data ) {
     console.log("retour serveur : "+data);
   });
   }
 
+  function testson(actif,id){
+    if(actif)
+    {
+      url="/testaudio?PLAY=true&VOL="+$("#volAUDIO"+id).val();
+      url+="&PISTE="+$("#pistemp3"+id+" option:selected").val();
+      
+      $('#startTestSon'+id).addClass("d-none");
+      $('#stopTestSon'+id).removeClass("d-none");
+    }
+    else
+    {
+      url="testaudio?PLAY=false";
+      $('#startTestSon'+id).removeClass("d-none");
+      $('#stopTestSon'+id).addClass("d-none");
+    }
+
+    $.get(url, function( data ) {
+      console.log("retour serveur : "+data);
+    });
+  }
 
   function checkDay(e) {
-    var reveilid = e.target.value || e.target.parentNode.value
+    var reveilid = e.target.value || e.target.parentNode.value;
     ald="";
     for (i=1;i<8;i++) {
       ald+=$("#reveil"+reveilid+" #alday"+i).prop('checked')+(i==7?"":",");
     }
-    // Alarmes(reveilid,'ALD',ald);
   }
 
   /***
@@ -923,7 +910,7 @@ function Alarmes(id, cle = "" , valeur = "") {
    * @param {*} e event correspondant au bouton pressé
    */
   function reveilAudio(e){
-    var boutonid = e.target.id || e.target.parentNode.id
+    var boutonid = e.target.id || e.target.parentNode.id;
     var id = boutonid.substring("reveilAudio".length);
      if ($(this).prop('checked'))  {
       if (tA==1 ) {
@@ -944,7 +931,7 @@ function Alarmes(id, cle = "" , valeur = "") {
    * @param {*} e event correspondant au bouton pressé
    */
   function upAl(e) {;
-    var boutonid = e.target.id || e.target.parentNode.id
+    var boutonid = e.target.id || e.target.parentNode.id;
     var id = boutonid.substring("btn_upAl".length);
 
     $("#reveil"+id+" #blocAl").addClass("text-danger");
@@ -961,7 +948,7 @@ function Alarmes(id, cle = "" , valeur = "") {
    * @param {*} e event correspondant au bouton pressé
    */
   function stopAl(e) {
-    var boutonid = e.target.id || e.target.parentNode.id
+    var boutonid = e.target.id || e.target.parentNode.id;
     var id = boutonid.substring("btn_stopAl".length);
 
     $("#reveil"+id+" #blocAl").addClass("text-secondary");
@@ -1016,8 +1003,8 @@ function getHtmlAlarme(id,visible){
   html+="       <div class=\"col-12\">";
   html+="		    	<div class=\"col-6 col-sm-6 col-md-5 col-lg-4\"></div>";
   html+="		    </div>";
-  html+="	  	<div class=\"col-6\">";
 
+  html+="	  	<div class=\"col-6\">";
   // saisie du titre
   html+="			 <div class=\"form-group \"  id='reveilTitle'><br />";
   html+="            <INPUT type='text' maxlength='50' placeholder=\"Nom de l'alarme\"";
@@ -1028,14 +1015,25 @@ function getHtmlAlarme(id,visible){
   html+="        <div class=\"input-group my-3 mx-auto\" id=\"Alarme\">";
   html+="          <input type=\"time\" class=\"form-control text-primary\" value=\"07:00\" style=\"width:30px;\" />";
   html+="        </div>";
+  html+="       <div class=\"row\">";
+  html+="        <div class=\"col-6 align-self-center text-center mx-auto\">";
+  html+="          <input class=\"form-check  form-check-inline repeatAlarme\" type=\"checkbox\" id=\"repeatAlarme"+id+"\" value="+id+">";
+  html+="          <label class=\"form-check-label\" for=\"repeatAlarme"+id+"\">Répétition</label>";
+  html+="        </div>";
+  html+="        <div class=\"col-6\">";
+  html+="          <input type=\"number\" class=\"form-control text-primary d-none\" id=\"SleepTime"+id+"\" value=\"5\" min=\"01\" max=\"30\"/>";
+  html+="            <label for=\"SleepTime"+id+"\" class=\"text-primry\"><small class=\"text-info d-none\" id=\"infoSleepTime"+id+"\">Délai de pause en minutes.</small></label>";
+  html+="        </div>";
+  html+="        </div>";
   html+="        </div>"; // fin div col-6
+ 
 
   // partie audio
  html+="	  	<div class=\"col-6\">";
  html+="			  <div class=\"form-group d-none mt-2\" id=\"groupAUDIO_"+id+"\">";
  html+="				<div class=\"custom-control custom-checkbox\">";
  html+="				  <input type=\"checkbox\" class=\"custom-control-input reveilAudio\" id=\"reveilAudio"+id+"\">";
- html+="				  <label class=\"custom-control-label text-primary\" for=\"reveilAudio"+id+"\">Notification AUDIO<small class=\"text-info\" id=\"infoTypeAudio"+id+"\"></small></label>";
+ html+="				  <label class=\"custom-control-label text-primry\" for=\"reveilAudio"+id+"\">Notification AUDIO<small class=\"text-info\" id=\"infoTypeAudio"+id+"\"></small></label>";
  html+="				</div>";
  html+="			  </div>";
  html+="			  <div class=\"form-group d-none\" id=\"groupAUDIO1_"+id+"\">"; // pour le buzer
@@ -1043,10 +1041,15 @@ function getHtmlAlarme(id,visible){
  html+="				</select>";
  html+="			  </div>";
  html+="			  <div class=\"mx-auto d-none\" id=\"groupAUDIO2_"+id+"\">"; // pour MP3
- html+="				   <select class=\"form-control pistemp3\" name='pistemp3' id='pistemp3"+id+"'><br />";
+ html+="			     <input type=\"hidden\" name='numPisteMP3"+id+"' id='numPisteMP3"+id+"' value=\"-1\"/>";
+ html+="			     <select class=\"form-control categoriemp3\" name='categoriemp3' id='categoriemp3"+id+"'></select>";
+ html+="				   <select class=\"form-control pistemp3\" name='pistemp3' id='pistemp3"+id+"'></select><br />";
  html+="				  <input type=\"range\" id=\"volAUDIO"+id+"\" name=\"volume1\" min=\"0\" max=\"100\" value=\"40\" ";
  html+="				        oninput=\"valVolume"+id+".value = volume1.valueAsNumber\">";
  html+="				<output class=\"text-primary\" for=\"volAUDIO"+id+"\" name=\"valVolume"+id+"\"></output>";
+ html+="				<div class=\"form-group text-right\">";
+ html+="				<button type=\"button\" class=\"btn btn-outline-primary m-2\" id=\"startTestSon"+id+"\" onclick=\"testson(true,"+id+");\">Test</button>";
+ html+="			  <button type=\"button\" class=\"btn btn-outline-danger m-2 d-none\" id=\"stopTestSon"+id+"\" onclick=\"testson(false,"+id+");\">Stop</button></div>";
  html+="			  </div>";
  html+="        </div>"; // fin div col-6
 
@@ -1084,15 +1087,7 @@ function getHtmlAlarme(id,visible){
   html+="          <label class=\"form-check-label\" for=\"alday1\">Dim</label>";
   html+="        </div>";
   html+="      </div> <br />";
-
-// url action
-html+="			 <div class=\"form-group \"  id='urlAction'><br />";
-html+="            <INPUT type='text' maxlength='80' id='urlAction"+id+"' placeholder=\"Url post Action\"";
-html+="                      class=\"form-control text-primary\" aria-describedby=\"msghelp\" />";
-html+="            <small id=\"msghelp\" class=\"form-text text-muted\">URL à déclancher lorsque l'alarme est désativée par l'utilisateur | Vide si pas d'action</small>";
-html+="      </div>";
-
-
+  
   html+="      <div class=\"form-group text-center\">";
   html+="        <button type=\"button\" class=\"btn btn-outline-dark\" id=\"btn_stopAl"+id+"\"><i class=\"fas fa-power-off h3\"></i></button>";
   html+="        <button type=\"button\" class=\"btn btn-outline-danger\" id=\"btn_upAl"+id+"\"><i class=\"fas fa-bell h3\"></i></button>";
@@ -1222,7 +1217,85 @@ function checkGithub() {
   });
 }
 
+function loadPisteMp3(){
+  $.get("mp3.json", function(data){
+    pisteMP3 = data.PisteMP3;
+    $.each(pisteMP3, function (value, text) {
+      $('.categoriemp3').append($('<option>', {
+              value: value+1,
+              text : (value+1)+" - "+text.categorie
+          }));
+    });
+    var pistes = pisteMP3[0];
+    $.each(pistes.pistes, function (value, text) {
+      $('.pistemp3').append($('<option>', {
+              value: text.id,
+              text : (value+1)+" - "+text.titre
+          }));
+    });
+
+    for(i=1;i<=nbAlarme;i++){
+      setPisteMP3Alarme(i);
+    }
+  });
+}
+
+function onChangeCategorieMP3(e){
+  var boutonid = e.target.id || e.target.parentNode.id;
+  var id = boutonid.substring("categoriemp3".length);
+  changeCategorie(id);
+}
+
+function changeCategorie(id) {
+  $('#pistemp3'+id)
+    .find('option')
+    .remove()
+    .end();
+
+    //remplissage select MP3
+  var pistes = pisteMP3[$("#categoriemp3"+id).val()-1];
+  $.each(pistes.pistes, function (value, text) {
+    $('#pistemp3'+id).append($('<option>', {
+            value: text.id,
+            text : (value+1)+" - "+text.titre
+        }));
+  });
+}
+
+function setPisteMP3Alarme(id)
+{
+
+  var numPiste = $('#numPisteMP3'+id).val();
+  if(numPiste==-1) return;
+
+  var textPiste;
+  if(numPiste<10) textPiste = "00"+numPiste;
+  else if (numPiste<100) textPiste = "0"+numPiste;
+  else textPiste = ""+numPiste;
+
+  $.each(pisteMP3, function (value, text) {
+    if(text.min<numPiste && text.max>numPiste)
+    {
+      // console.log("catégorie - " + text.categorie + ", " + textPiste);
+      $("#categoriemp3"+id).val(value+1);
+      changeCategorie(id);
+      $.each(text.pistes, function (value, text2) {
+        if(text2.id==textPiste)
+        {
+          console.log("Trouvé - "+ value+" - " + text2.titre);
+          $("#pistemp3"+id).val(textPiste);
+        }
+      });
+    }
+  });
+
+  var pistes = pisteMP3[id-1];
+}
+
 $( document ).ready(function() {
+
+  
+  loadPisteMp3(); 
 
   getInfo();
 
@@ -1242,7 +1315,7 @@ $( document ).ready(function() {
   $('#BRI').on('change',Options);
   $('#COLOR').on('change',Options);
   $('#DDHT').on('change',Options);
-  $('.reveilAudio').on('change',reveilAudio);;
+  $('.reveilAudio').on('change',reveilAudio);
 
   $('input[type="range"]').rangeslider({
   polyfill: false
@@ -1250,14 +1323,6 @@ $( document ).ready(function() {
   //remplissage select
   $.each(buzMusic, function (value, text) {
     $('.buzaudio').append($('<option>', {
-            value: value+1,
-            text : (value+1)+" - "+text
-        }));
-  });
-
-  //remplissage select MP3
-  $.each(pisteMP3, function (value, text) {
-    $('.pistemp3').append($('<option>', {
             value: value+1,
             text : (value+1)+" - "+text
         }));
