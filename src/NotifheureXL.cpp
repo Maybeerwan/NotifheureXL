@@ -1900,10 +1900,17 @@ void displayHisto() {
   else iH++;
 }
 
+/**
+ * Fin de l'alarme 
+ * @param true is on éteind completement l'alarme
+ * */
 void finNotif2(bool finAlarme) {
+  String msgNotif="Fin alarme";
+
   if (AUDIONOTIF) {
     audio('S');
-    Serial.println("fin music");
+    msgNotif=" audio";
+    //Serial.println("fin music");
   }
   cmdLED(configSys.LED);
   alarmeDring = -1;
@@ -1912,10 +1919,12 @@ void finNotif2(bool finAlarme) {
     byte min = minute()+Alarmes[repeatAlarme].timeSleep;
     nextTimeRev[1] = (min<60)?min:min-60;
     nextTimeRev[0] = (min<60)?hour():hour()+1;
+    msgNotif += " REPETITION "+String(nextTimeRev[0])+":"+String(nextTimeRev[1]);
   }
   else {
     repeatAlarme = -1;
   }
+  displayNotif(msgNotif);
 }
 
 void finNotif()
@@ -2049,7 +2058,7 @@ void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
   // Serial.println("Vérification des alarmes j:" + String(day));
   //byte repeatAlarme = -1; // id de l'alarme en cours de repeat
   // byte nextTimeRev[2]; // heure du prochain repeat
-  if(repeatAlarme < -1)
+  if(repeatAlarme >= 0)
   {
     if(hour==nextTimeRev[0] && minute==nextTimeRev[1])
       {  
