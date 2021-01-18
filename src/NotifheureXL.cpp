@@ -1236,6 +1236,7 @@ switch (hardConfig.typeAudio) {
           //myDFPlayer.advertise(configSys.MP3Notif);
         }
         else if (action=='S') {
+          notifAudio.active=false;
           notifAudio.state=false;
           myDFPlayer.pause();
         }
@@ -1909,7 +1910,7 @@ void finNotif2(bool finAlarme) {
 
   if (AUDIONOTIF) {
     audio('S');
-    msgNotif=" audio";
+    msgNotif+=" audio";
     //Serial.println("fin music");
   }
   cmdLED(configSys.LED);
