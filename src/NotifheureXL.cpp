@@ -2841,13 +2841,14 @@ void handleMusique() {
     value=server.arg(i);
 
     if(key=="PLAY") {optionsBool(&play,value);}
-    if(key=="PISTE") {ptionsNum(&numPiste, value,1,265);}
-    if(key=="VOL") {ptionsNum(&vol, value,1,100);}
+    if(key=="PISTE") {optionsNum(&numPiste, value,1,265);}
+    if(key=="VOL") {optionsNum(&vol, value,1,100);}
   }
   if (play && numPiste>0 && vol>0) 
   {
     notifAudio.piste=numPiste; 
     notifAudio.volume=vol; 
+    notifAudio.active=true;
     displayNotif("Test",zoneTime);
     rep="Lecture du morceau n"+String(numPiste)+" au volume "+String(vol);
   }
