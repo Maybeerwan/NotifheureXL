@@ -2003,6 +2003,11 @@ switch (actionClick) {
       case 12 : // eteindre alarmes
               finNotif2(true);
       break; 
+      case 13 : 
+          String infoSys = " IP : ";
+          infoSys += WiFi.localIP().toString();
+          displayNotif(infoSys);
+      break;
     default:
 
       break;
