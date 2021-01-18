@@ -398,9 +398,9 @@ $.ajax({
 }
 
 function getAlarmes() {
-  /* tA = 2;
+ /*  tA = 2;
    var data="{\"NbAlarmes\":2,\"alarmes\":[\
-     {\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"pisteMP3\":255,\"repeat\":true,\"timeSleep\":9,\
+     {\"id\":0,\"nom\":\"Mon Alarme n°1\",\"actif\":true,\"heure\":7,\"minute\":2,\"volumeAudio\":30,\"pisteMP3\":42,\"repeat\":true,\"timeSleep\":9,\
      \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true},{\"id\":0,\"NOM\":\"Mon Alarme n°1\",\"ACTIF\":true,\"HEURE\":10,\"MINUTE\":35,\"VOLUMEAUDIO\":30,\"pisteMP3\":2,\"repeat\":\"true\",\"timeSleep\":7,\
      \"ALDAY\":[false,true,false,true,false,false,false],\"audio\":true}]}";
    var json = JSON.parse(data);
@@ -464,8 +464,12 @@ function getAlarmes() {
         $("#reveil"+id+" #blocAl").removeClass("text-danger");
         $("#reveil"+id+" #blocAl h3").text("Alarme Inactive");
       }
-      $("#reveil"+id+" #Alarme input").val(val.heure+":"+val.minute);
-      $("#reveil"+id+" #blocAl h1").text(val.heure+":"+val.minute);
+      var minloc = val.minute;
+      if(minloc<10) {minloc="0"+val.minute;}
+      var heurloc=val.heure;
+      if(heurloc<10){heurloc="0"+val.heure;}
+      $("#reveil"+id+" #Alarme input").val(heurloc+":"+minloc);
+      $("#reveil"+id+" #blocAl h1").text(heurloc+":"+minloc);
       $("#reveil"+id+" #titre h3").text(val.nom);
       $("#reveil"+id+" #reveilTitle input").val(val.nom);
       $('#reveilAudio'+id).prop('checked',val.audio);
@@ -484,9 +488,9 @@ function getAlarmes() {
 
           $("#numPisteMP3"+id).val(val.pisteMP3); 
           if(typeof pisteMP3 == 'undefined'){
-            console.log("Valeur non défini");
+            console.log("PisteMP3 pas encore initialisées");
          }else{
-          setPisteMP3Alarme(pisteMP3);
+          setPisteMP3Alarme(id);
          }         
           
         }
@@ -1290,7 +1294,7 @@ function setPisteMP3Alarme(id)
     }
   });
 
-  var pistes = pisteMP3[id-1];
+  // var pistes = pisteMP3[id-1];
 }
 
 $( document ).ready(function() {
