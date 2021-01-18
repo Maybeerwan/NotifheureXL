@@ -186,7 +186,7 @@ const char* www_password = "notif";
 //mqtt server
 //char mqtt_server[] = "192.168.8.210";
 // basetopic
-#define BASETOP "byfeel"
+#define BASETOP "maybenous"
 // Active broker
 #define BROKER_VALID false
 #define BROKER_IP ""
@@ -1920,7 +1920,9 @@ void finNotif2(bool finAlarme) {
     byte min = minute()+Alarmes[repeatAlarme].timeSleep;
     nextTimeRev[1] = (min<60)?min:min-60;
     nextTimeRev[0] = (min<60)?hour():hour()+1;
-    msgNotif += " REPETITION "+String(nextTimeRev[0])+":"+String(nextTimeRev[1]);
+    char heurePrint[10];
+    sprintf (heurePrint, "%02d:%02d", nextTimeRev[0],nextTimeRev[1]); 
+    msgNotif += " REPETITION "+ String(heurePrint);
   }
   else {
     repeatAlarme = -1;
