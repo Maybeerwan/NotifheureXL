@@ -354,9 +354,9 @@ $.ajax({
               $("#cardmqtt").addClass("d-none");
           }
           //Jours
-          for (i=1;i<8;i++) {
-            $("#alday"+i).prop('checked',jinfo.ALDAY[i]);
-          }
+         // for (i=1;i<8;i++) {
+          //  $("#alday"+i).prop('checked',jinfo.ALDAY[i]);
+         // }
         }
    },
      error: function(resultat,statut) {
