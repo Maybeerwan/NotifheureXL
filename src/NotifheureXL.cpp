@@ -122,13 +122,13 @@ const char* www_password = "notif";
 // *** PIN ******
 // ***************
 // PIN DHT
-#define dhtpin D3 // GPIO16  egale a D2 sur WEMOS D1R1  ou D0 pour mini ( a verifier selon esp )
+#define dhtpin D6 // GPIO16  egale a D2 sur WEMOS D1R1  ou D0 pour mini ( a verifier selon esp )
 // Entree analogique pour auto luminosité
 // PIN Analogique pour photocell
 #define PINAUTO_LUM A0
 //Boutons
 #define PIN_BTN1 D4
-#define PIN_BTN2 D6
+#define PIN_BTN2 D3
 // ************************
 // *********** FIN PIN ****
 // ************************
@@ -848,9 +848,9 @@ struct sAlarme {
 };
 
 sAlarme Alarmes[NB_ALARMES];  // Nombre d'alarmes
-byte timeSonStart = -1;
-byte alarmeDring = -1;   // numéro de l'alamre si une alarme est en cours de sonnerie
-byte repeatAlarme = -1; // id de l'alarme en cours de repeat
+short timeSonStart = -1;
+short alarmeDring = -1;   // numéro de l'alamre si une alarme est en cours de sonnerie
+short repeatAlarme = -1; // id de l'alarme en cours de repeat
 byte nextTimeRev[2]; // heure du prochain repeat
 
  //void setType() {MD_MAX72XX::setModuleType(HARDWARE_TYPE);}
@@ -2069,7 +2069,7 @@ void verifierAlarme(byte day, byte hour, byte minute, byte seconde)
       {  
         if (seconde <5 && seconde >0 )
         {
-          Serial.println("Lancement de l'alarme " + i);
+          // Serial.println("Lancement de l'alarme " + i);
           alarme(i);
         }
       }

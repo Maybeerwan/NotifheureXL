@@ -13,7 +13,7 @@ var typeLed= ["Absent","LED Interne","Commande Relais","Neopixel Ring","Sortie D
 var buzMusic=["Mission Impossible","Star Wars","Indiana Jones","Panthere Rose","Famille Adam's","l'exorciste","The simpsons","Tetris","Arkanoid","Super Mario","Xfiles","AxelF","PacMan","dambuste","Muppet show","James Bond","Take On Me","Agence tout risque","Top Gun","les Schtroumpfs","l'arnaque","looney Tunes","20 century fox","Le bon, la brute ...","Retour vers le futur"];
 
 // var pisteMP3=["Piste 1", "piste 2", "piste 3"];
-var pisteMP3;
+var pisteMP3=[];
 
 var ZXL=["Zone XL","Zone XL haut","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone notif 6"];
 var Z=["Zone Horloge","Zone Message","Zone Notif 2","Zone notif 3","Zone notif 4","Zone Notif 5","Zone Notif 6","Zone Notif 7"];
@@ -1218,7 +1218,8 @@ function checkGithub() {
 }
 
 function loadPisteMp3(){
-  $.get("mp3.json", function(data){
+  $.getJSON("mp3.json", function(data){
+    console.log(data);
     pisteMP3 = data.PisteMP3;
     $.each(pisteMP3, function (value, text) {
       $('.categoriemp3').append($('<option>', {
