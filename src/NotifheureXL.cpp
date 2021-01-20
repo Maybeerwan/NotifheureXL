@@ -1966,8 +1966,8 @@ switch (actionClick) {
           m=1;
       break;
       case 4 :cmdLED(!configSys.LED);
-      m=1;
-  break;
+          m=1;
+      break;
       case 5 :  //affichage Historique
       if (indexHist>0) displayHisto();
       else {
@@ -3332,12 +3332,15 @@ boolean MQTTconnect() {
     // envoie de la config auto à la premiere connection
     if (startSend && configSys.HA) MQTTconfig();
 
+    String msg = "Connection MQTT OK";
+    displayNotif(msg);
     } else {  // si erreur connexion
         statebroker=false;
         if (configSys.DEBUG) {
             Serial.print("ECHEC, rc=");
             Serial.print(MQTTclient.state());
           }
+          String msg = "Connection MQTT KO : " + String(MQTTclient.state());
     }
   return MQTTclient.connected();
 }
