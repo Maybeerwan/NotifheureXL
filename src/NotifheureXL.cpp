@@ -1938,6 +1938,7 @@ void finNotif()
 void BoutonAction(byte btn , byte btnclic ) {
 int actionClick=0;
 int m=0;
+String myinfoSys;
 static byte clicstate=1;
 if (btn==10) actionClick=btnclic;
 else if (btnclic < 4 ) {
@@ -2004,9 +2005,9 @@ switch (actionClick) {
               finNotif2(true);
       break; 
       case 13 : 
-          String infoSys = " IP : ";
-          infoSys += WiFi.localIP().toString();
-          displayNotif(infoSys);
+          myinfoSys = " IP : ";
+          myinfoSys += WiFi.localIP().toString();
+          displayNotif(myinfoSys);
       break;
     default:
 
