@@ -342,6 +342,7 @@ $.ajax({
               $("#infostatemqtt").text("Erreur Connexion");
             }
             $("#infoipmqtt").text(jinfo.SRVBROKER);
+            $("#infoportmqtt").text(jinfo.PORTBROKER);
             if (jinfo.UBROKER !="") $("#infousermqtt").text(jinfo.UBROKER);
             else $("#infousermqtt").text("Serveur MQTT anonyme");
             $("#infotempomqtt").text(jinfo.TEMPOBROKER);

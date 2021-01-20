@@ -1178,22 +1178,16 @@ void saveAlarmes(const char *fileAlarmes,String json) {
 
 void MQTTsendAlarme(sAlarme  *alarmes) {
 
-  String jsonAlarme = createAlarmeJson(alarmes);
-  // Length (with one extra character for the null terminator)
-  int str_len = jsonAlarme.length() + 1; 
+  String t;
+  char buffer[512];
 
-  // Prepare the character array (the buffer) 
-  char char_array[str_len];
-
-  // Copy it over 
-  jsonAlarme.toCharArray(char_array, str_len);
+  DynamicJsonDocument doc = createAlarmeDocJson(alarmes);
 
   Serial.println("envoie publication MQTT");
-  //docMqtt["temperature"]=String(temperature);
-  // size_t n = serializeJson(doc, buffer);
-  String t=topicName+String(TOPIC_ALARMES);
+  size_t n = serializeJson(doc, buffer);
+  t=topicName+String(TOPIC_ALARMES);
   Serial.println(t);
-  MQTTclient.publish(t.c_str(), char_array);
+  MQTTclient.publish(t.c_str(), buffer,n);
 }
 
 // fonction audio ( 0:none , 1 : Buzzer , 2 = MP3player , 4 = relais , 5 = sortie PIN digital)
