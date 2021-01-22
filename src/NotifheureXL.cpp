@@ -2869,51 +2869,55 @@ void handleMusique() {
   server.send(200,"text/plane",rep);
 }
 
+void setAlarmeJson(DynamicJsonDocument docAlarme) {
+ int i = docAlarme["id"];
+  Serial.println("configAlarme : mise à jour de l'alarme " + i);
+  // si argument avec identifiant alors on mets à jour
+  if(i>-1 && i< NB_ALARMES) {
+    if(!optionsBool(&Alarmes[i].actif, docAlarme["actif"])) { Alarmes[i].actif=false;}		// optionsNum(&configSys.color,value,0,7)
+
+    if(Alarmes[i].actif)
+    {
+      // parametre 
+      strlcpy(Alarmes[i].nom,docAlarme["nom"], sizeof(Alarmes[i].nom));
+      optionsNum(&Alarmes[i].heure, docAlarme["heure"],0,23);
+      optionsNum(&Alarmes[i].minute, docAlarme["minute"],0,59);
+      // alarme jours
+
+      optionsSplit(Alarmes[i].alDay, docAlarme["ald"],','); // terminé par le séparateur pour prendre en compte la dernière valeur
+
+      // strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
+      if(!optionsBool(&Alarmes[i].repeat, docAlarme["repeat"])) { Alarmes[i].repeat=false;}
+      optionsNum(&Alarmes[i].timeSleep, docAlarme["stime"],0,30);  
+
+      optionsNum(&Alarmes[i].fxAL, docAlarme["fxal"],0,5);        
+      optionsNum(&Alarmes[i].fxSoundAL, docAlarme["fxsoundal"],0,30);    
+      // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
+      optionsNum(&Alarmes[i].volumeAudio, docAlarme["volumeaudio"],0,100);	
+      optionsNum(&Alarmes[i].pisteMP3, docAlarme["pistemp3"],0,totalMP3);
+      if(!optionsBool(&Alarmes[i].led, docAlarme["led"])) { Alarmes[i].led=false;}
+      if(!optionsBool(&Alarmes[i].audio, docAlarme["audio"])) { Alarmes[i].audio=false;}
+      Serial.println("configAlarme : mise à jour de l'alarme terminee");
+    }
+    Serial.println("configAlarme : mise à jour de l'alarme terminee");
+	}
+}
+
 void handleAlarme() {
   
   DynamicJsonDocument docAlarme(capacityAlarme); // TODO eventuellement réduire la capacite
-  docAlarme["ID"] = -1; // identifiant par défaut
+  docAlarme["id"] = -1; // identifiant par défaut
   String key,value, rep;
   // lecture des tout les arguments
   for (int i = 0; i < server.args(); i++) {
     key=server.argName(i);
-    key.toUpperCase();
+    key.toLowerCase();
     value=server.arg(i);
     docAlarme[key]=value;
      Serial.println("configAlarme : " + key + " : " + value);
   }
 
-  int i = docAlarme["ID"];
-  Serial.println("configAlarme : mise à jour de l'alarme " + i);
-  // si argument avec identifiant alors on mets à jour
-  if(i>-1 && i< NB_ALARMES) {
-    if(!optionsBool(&Alarmes[i].actif, docAlarme["ACTIF"])) { Alarmes[i].actif=false;}		// optionsNum(&configSys.color,value,0,7)
-
-    if(Alarmes[i].actif)
-    {
-      // parametre 
-      strlcpy(Alarmes[i].nom,docAlarme["NOM"], sizeof(Alarmes[i].nom));
-      optionsNum(&Alarmes[i].heure, docAlarme["HEURE"],0,23);
-      optionsNum(&Alarmes[i].minute, docAlarme["MINUTE"],0,59);
-      // alarme jours
-
-      optionsSplit(Alarmes[i].alDay, docAlarme["ALD"],','); // terminé par le séparateur pour prendre en compte la dernière valeur
-
-      // strlcpy(Alarmes[i].callback,docAlarme["CALLBACK"], sizeof(Alarmes[i].callback));
-      if(!optionsBool(&Alarmes[i].repeat, docAlarme["REPEAT"])) { Alarmes[i].repeat=false;}
-      optionsNum(&Alarmes[i].timeSleep, docAlarme["STIME"],0,30);  
-
-      optionsNum(&Alarmes[i].fxAL, docAlarme["FXAL"],0,5);        
-      optionsNum(&Alarmes[i].fxSoundAL, docAlarme["FXSOUNDAL"],0,30);    
-      // optionsNum(&Alarmes[i].action, docAlarme["ACTION"] );     
-      optionsNum(&Alarmes[i].volumeAudio, docAlarme["VOLUMEAUDIO"],0,100);	
-      optionsNum(&Alarmes[i].pisteMP3, docAlarme["PISTEMP3"],0,totalMP3);
-      if(!optionsBool(&Alarmes[i].led, docAlarme["LED"])) { Alarmes[i].led=false;}
-      if(!optionsBool(&Alarmes[i].audio, docAlarme["AUDIO"])) { Alarmes[i].audio=false;}
-      Serial.println("configAlarme : mise à jour de l'alarme terminee");
-    }
-    Serial.println("configAlarme : mise à jour de l'alarme terminee");
-	}
+    setAlarmeJson(docAlarme);
 
     String json=createAlarmeJson(Alarmes);
     // Serial.println("configAlarme : sauvegarde de l'alarme");
@@ -3286,6 +3290,19 @@ else if (t.indexOf(TOPIC_CONFIG)>10) {
   }
       if (upCfg>0) handleConfig();
            
+}
+else if (t.indexOf(TOPIC_ALARMES)>10) {
+  if (docMqtt.containsKey("set")) {
+
+    setAlarmeJson(docMqtt);
+
+    String json=createAlarmeJson(Alarmes);
+    // Serial.println("configAlarme : sauvegarde de l'alarme");
+    saveAlarmes(fileAlarmes,json);
+    // Serial.println("configAlarme : sauvegarde de l'alarme terminee");
+    MQTTsendAlarme(Alarmes);
+
+  }
 }
 /*
   payload[length] = '\0';
