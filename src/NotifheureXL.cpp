@@ -1117,7 +1117,39 @@ void loadAlarmes(const char *fileAlarmes, sAlarme *alarmes ) {
   // Serial.println("loadAlarmes : Chargement des alarmes OK");
 }
 
-DynamicJsonDocument createAlarmeDocJson(sAlarme  *alarmes) {
+DynamicJsonDocument createSingleAlarmeDocJson(sAlarme  *alarmes, int i) {
+  DynamicJsonDocument doc(capacityAlarme);
+  JsonObject objAlarmes = doc.createNestedObject();
+
+  // parametre
+  objAlarmes["id"] = i;
+  objAlarmes["nom"] = alarmes[i].nom;
+  objAlarmes["actif"] = alarmes[i].actif;		
+  objAlarmes["heure"] = alarmes[i].heure;
+  objAlarmes["minute"] = alarmes[i].minute;
+  // alarme jours
+  JsonArray aday = objAlarmes.createNestedArray("ALDAY");
+  aday.add(alarmes[i].alDay[0]);
+  aday.add(alarmes[i].alDay[1]);
+  aday.add(alarmes[i].alDay[2]);
+  aday.add(alarmes[i].alDay[3]);
+  aday.add(alarmes[i].alDay[4]);
+  aday.add(alarmes[i].alDay[5]);
+  aday.add(alarmes[i].alDay[6]);
+  
+  //objAlarmes["callback"] = alarmes[i].callback;
+  objAlarmes["fxAL"] = alarmes[i].fxAL;         
+  objAlarmes["fxSoundAL"] = alarmes[i].fxSoundAL;    
+  objAlarmes["volumeAudio"] = alarmes[i].volumeAudio;	
+  objAlarmes["pisteMP3"] = alarmes[i].pisteMP3;
+  objAlarmes["led"] = alarmes[i].led;
+  objAlarmes["audio"] = alarmes[i].audio;    
+  objAlarmes["repeat"] = alarmes[i].repeat;  
+  objAlarmes["timeSleep"] = alarmes[i].timeSleep; 
+
+}
+
+DynamicJsonDocument createAlarmesDocJson(sAlarme  *alarmes) {
   // Serial.println("createAlarmeJson : creation du json");
   DynamicJsonDocument doc(capacityAlarmes);
 
@@ -1161,7 +1193,7 @@ DynamicJsonDocument createAlarmeDocJson(sAlarme  *alarmes) {
 
 String createAlarmeJson(sAlarme  *alarmes) {
   String json;
-  DynamicJsonDocument doc = createAlarmeDocJson(alarmes);
+  DynamicJsonDocument doc = createAlarmesDocJson(alarmes);
   serializeJsonPretty(doc,json);
   Serial.println("createAlarmeJson : creation du json OK");
   return json;
@@ -1176,16 +1208,16 @@ void saveAlarmes(const char *fileAlarmes,String json) {
    f.close();
 }
 
-void MQTTsendAlarme(sAlarme  *alarmes) {
+void MQTTsendAlarme(sAlarme  *alarmes, int i) {
 
   String t;
-  char buffer[30+(NB_ALARMES*265)];
+  char buffer[265];
 
-  DynamicJsonDocument doc = createAlarmeDocJson(alarmes);
+  DynamicJsonDocument doc = createSingleAlarmeDocJson(alarmes, i);
 
   Serial.println("envoie publication MQTT");
   size_t n = serializeJson(doc, buffer);
-  t=topicName+String(TOPIC_ALARMES);
+  t=topicName+String(TOPIC_ALARMES)+"/"+String(i);
   Serial.println(t);
   MQTTclient.publish(t.c_str(), buffer,n);
 }
@@ -2869,7 +2901,7 @@ void handleMusique() {
   server.send(200,"text/plane",rep);
 }
 
-void setAlarmeJson(DynamicJsonDocument docAlarme) {
+int setAlarmeJson(DynamicJsonDocument docAlarme) {
  int i = docAlarme["id"];
   Serial.println("configAlarme : mise à jour de l'alarme " + i);
   // si argument avec identifiant alors on mets à jour
@@ -2897,10 +2929,11 @@ void setAlarmeJson(DynamicJsonDocument docAlarme) {
       optionsNum(&Alarmes[i].pisteMP3, docAlarme["pistemp3"],0,totalMP3);
       if(!optionsBool(&Alarmes[i].led, docAlarme["led"])) { Alarmes[i].led=false;}
       if(!optionsBool(&Alarmes[i].audio, docAlarme["audio"])) { Alarmes[i].audio=false;}
-      Serial.println("configAlarme : mise à jour de l'alarme terminee");
     }
     Serial.println("configAlarme : mise à jour de l'alarme terminee");
+    MQTTsendAlarme(Alarme, i);
 	}
+  return i;
 }
 
 void handleAlarme() {
@@ -2917,14 +2950,14 @@ void handleAlarme() {
      Serial.println("configAlarme : " + key + " : " + value);
   }
 
-    setAlarmeJson(docAlarme);
+    int i = setAlarmeJson(docAlarme);
 
     String json=createAlarmeJson(Alarmes);
     // Serial.println("configAlarme : sauvegarde de l'alarme");
     saveAlarmes(fileAlarmes,json);
+    string msg = "Reveil " + String(i) + " modifié";
+    displayNotif(msg);
     // Serial.println("configAlarme : sauvegarde de l'alarme terminee");
-    MQTTsendAlarme(Alarmes);
-
   server.send(200,"application/json",json);
 
 }
@@ -3294,14 +3327,14 @@ else if (t.indexOf(TOPIC_CONFIG)>10) {
 else if (t.indexOf(TOPIC_ALARMES)>10) {
   if (docMqtt.containsKey("set")) {
 
-    setAlarmeJson(docMqtt);
+    int i = setAlarmeJson(docMqtt);
 
     String json=createAlarmeJson(Alarmes);
     // Serial.println("configAlarme : sauvegarde de l'alarme");
     saveAlarmes(fileAlarmes,json);
     // Serial.println("configAlarme : sauvegarde de l'alarme terminee");
-    MQTTsendAlarme(Alarmes);
-
+    string msg = "Reveil " + String(i) + " modifié";
+    displayNotif(msg);
   }
 }
 /*
