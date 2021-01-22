@@ -1179,7 +1179,7 @@ void saveAlarmes(const char *fileAlarmes,String json) {
 void MQTTsendAlarme(sAlarme  *alarmes) {
 
   String t;
-  char buffer[512];
+  char buffer[30+(NB_ALARMES*265)];
 
   DynamicJsonDocument doc = createAlarmeDocJson(alarmes);
 
